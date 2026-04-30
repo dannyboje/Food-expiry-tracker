@@ -24,7 +24,7 @@ export function usePantry() {
       result = result.filter((i) => i.name.toLowerCase().includes(q));
     }
 
-    return result;
+    return result.slice().sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
   }, [enrichedItems, state.activeFilter, state.searchQuery]);
 
   const counts = useMemo(() => {

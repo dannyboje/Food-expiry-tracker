@@ -3,10 +3,16 @@ import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ExpiryBadge } from './expiry-badge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Brand, Colors } from '@/constants/theme';
 import type { FoodCategory, FoodItemWithStatus } from '@/types/food-item';
 import { computeScore, scoreColor } from '@/utils/food-score';
 import { usePantry } from '@/hooks/use-pantry';
+
+const STATUS_STRIPE: Record<string, string> = {
+  expired: Brand.red,
+  expiring_soon: Brand.orange,
+  fresh: Brand.green,
+};
 
 const CATEGORY_ICONS: Record<FoodCategory, string> = {
   dairy: '🥛',
@@ -61,7 +67,14 @@ export function FoodItemCard({ item }: Props) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.background,
+          borderBottomColor: colors.border,
+          borderLeftColor: STATUS_STRIPE[item.status],
+        },
+      ]}
       onPress={() => router.push(`/item/${item.id}`)}
       onLongPress={handleLongPress}
       delayLongPress={400}
@@ -108,6 +121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: 4,
   },
   iconContainer: {
     width: 40,
