@@ -3,16 +3,19 @@ import KVStore from 'expo-sqlite/kv-store';
 import type { FoodItem } from '@/types/food-item';
 import { shelfLifeDays } from './food-item-utils';
 
-// Suppress OS banners when app is in foreground — the in-app NotificationBanner handles display.
-// When the app is backgrounded/closed, iOS shows scheduled notifications normally.
+// Suppress expiry banners in foreground (the in-app NotificationBanner handles those).
+// Recall safety alerts always show, even in foreground.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: false,
-    shouldShowList: false,
-  }),
+  handleNotification: async (notification) => {
+    const isRecallAlert = notification.request.content.data?.type === 'recall_alert';
+    return {
+      shouldShowAlert: isRecallAlert,
+      shouldPlaySound: isRecallAlert,
+      shouldSetBadge: false,
+      shouldShowBanner: isRecallAlert,
+      shouldShowList: true,
+    };
+  },
 });
 
 export interface AlertThresholds {

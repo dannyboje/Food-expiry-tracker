@@ -1,6 +1,8 @@
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { useCallback, useState } from 'react';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -219,14 +221,24 @@ export default function HealthScreen() {
   const isEmpty = visiblePantry.length === 0 && visibleScans.length === 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>❤️  Health Scores</Text>
-        <Text style={[styles.subtitle, { color: colors.subtext }]}>
-          {scoredCount} pantry item{scoredCount !== 1 ? 's' : ''} rated · {sortedScans.length} recent scan{sortedScans.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <BgFoodDecor />
+      {/* Gradient header */}
+      <LinearGradient
+        colors={['#16A34A', '#22C55E', '#4ADE80']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}>
+        <HeaderFoodDecor />
+        <SafeAreaView edges={['top']}>
+          <View style={styles.header}>
+            <Text style={styles.title}>❤️  Health Scores</Text>
+            <Text style={styles.subtitle}>
+              {scoredCount} pantry item{scoredCount !== 1 ? 's' : ''} rated · {sortedScans.length} recent scan{sortedScans.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
 
       {/* Score legend — tap to filter by grade */}
       <View style={[styles.legend, { borderColor: colors.border }]}>
@@ -291,7 +303,7 @@ export default function HealthScreen() {
           </Text>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -316,9 +328,10 @@ function ScoreBubble({ composite, colors }: { composite: number | undefined; col
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerGradient: { paddingBottom: 14 },
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: 28, fontWeight: '800' },
-  subtitle: { fontSize: 13, marginTop: 2 },
+  title: { fontSize: 28, fontWeight: '800', color: '#fff', textShadowColor: 'rgba(0,0,0,0.12)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  subtitle: { fontSize: 13, marginTop: 2, color: 'rgba(255,255,255,0.85)' },
   legend: {
     flexDirection: 'row',
     justifyContent: 'space-around',

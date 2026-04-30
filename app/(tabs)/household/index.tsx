@@ -12,6 +12,7 @@ import { DIGEST_ENABLED_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/ut
 import { usePantry } from '@/hooks/use-pantry';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
@@ -251,11 +252,13 @@ export default function HouseholdScreen() {
   if (screen === 'setup') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <BgFoodDecor />
         <LinearGradient
           colors={['#16A34A', '#22C55E', '#4ADE80']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.setupGradient}>
+          <HeaderFoodDecor />
           <SafeAreaView edges={['top']}>
             <Text style={styles.setupHeaderTitle}>👨‍👩‍👧‍👦  Household</Text>
             <Text style={styles.setupHeaderSub}>Create your household profile</Text>
@@ -325,12 +328,14 @@ export default function HouseholdScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <BgFoodDecor />
       {/* Gradient header */}
       <LinearGradient
         colors={['#16A34A', '#22C55E', '#4ADE80']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.dashGradient}>
+        <HeaderFoodDecor />
         <SafeAreaView edges={['top']}>
           <View style={styles.dashHeader}>
             {/* Profile avatar — tap to change */}

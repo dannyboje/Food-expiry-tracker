@@ -9,7 +9,9 @@ import { FoodItemCard } from '@/components/food/food-item-card';
 import { CategoryFilterBar } from '@/components/food/category-filter-bar';
 import { EmptyState } from '@/components/food/empty-state';
 import { NotificationBanner } from '@/components/ui/notification-banner';
+import { RecallAlertBanner } from '@/components/ui/recall-alert-banner';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePantry } from '@/hooks/use-pantry';
@@ -20,7 +22,7 @@ export default function PantryScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { state, filteredItems, counts, alertItems, expiredCount, setSearch, setFilter } = usePantry();
+  const { state, filteredItems, counts, alertItems, expiredCount, setSearch, setFilter, dismissRecallAlert } = usePantry();
   const [localSearch, setLocalSearch] = useState('');
   const debounced = useDebounce(localSearch, 250);
 
@@ -31,6 +33,7 @@ export default function PantryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <BgFoodDecor />
       <NotificationBanner items={alertItems} />
 
       {/* Gradient header */}
@@ -39,6 +42,7 @@ export default function PantryScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
+        <HeaderFoodDecor />
         <SafeAreaView edges={['top']}>
           <View style={styles.headerRow}>
             <View style={styles.brandRow}>
@@ -73,6 +77,13 @@ export default function PantryScreen() {
           </View>
         </SafeAreaView>
       </LinearGradient>
+
+      {/* Recall safety alerts — shown above everything else when present */}
+      <RecallAlertBanner
+        alerts={state.recallAlerts}
+        onDismiss={dismissRecallAlert}
+        onDismissAll={() => state.recallAlerts.forEach((a) => dismissRecallAlert(a.pairId))}
+      />
 
       {/* Expired banner */}
       {expiredCount > 0 && (

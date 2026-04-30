@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { PantryProvider } from '@/context/pantry-context';
 import { initDatabase } from '@/utils/storage';
 import { requestNotificationPermissions } from '@/utils/notification-scheduler';
+import { scheduleDailyRecallCheck } from '@/utils/recall-scheduler';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -18,7 +19,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     initDatabase().catch(console.error);
-    requestNotificationPermissions().catch(console.error);
+    requestNotificationPermissions()
+      .then((granted) => { if (granted) scheduleDailyRecallCheck().catch(console.error); })
+      .catch(console.error);
   }, []);
 
   return (

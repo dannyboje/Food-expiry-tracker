@@ -1,10 +1,14 @@
-import React, { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
+import { AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import type { FoodItem, StorageLocation } from '@/types/food-item';
-import { getAllItems, insertItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem } from '@/utils/storage';
+import { getAllItems, insertItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem, cleanupExpiredItems } from '@/utils/storage';
 import { scheduleItemNotification, cancelItemNotifications } from '@/utils/notification-scheduler';
 import { recordConsumption, type ConsumptionType } from '@/utils/consumption-store';
 import { enrichItem } from '@/utils/food-item-utils';
 import { syncWidgetData, scheduleDailyDigest, cancelDailyDigest, DIGEST_ENABLED_KEY } from '@/utils/widget-data-sync';
+import { syncExpiredToShoppingList } from '@/utils/shopping-store';
+import { runRecallCheck, shouldRunCheck, getStoredAlerts, dismissAlert, type RecallMatch } from '@/utils/recall-checker';
 import KVStore from 'expo-sqlite/kv-store';
 
 interface PantryState {
@@ -13,6 +17,7 @@ interface PantryState {
   error: string | null;
   searchQuery: string;
   activeFilter: StorageLocation | 'all';
+  recallAlerts: RecallMatch[];
 }
 
 type PantryAction =
@@ -23,7 +28,8 @@ type PantryAction =
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'SET_FILTER'; payload: StorageLocation | 'all' }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null };
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_RECALL_ALERTS'; payload: RecallMatch[] };
 
 function reducer(state: PantryState, action: PantryAction): PantryState {
   switch (action.type) {
@@ -46,6 +52,8 @@ function reducer(state: PantryState, action: PantryAction): PantryState {
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    case 'SET_RECALL_ALERTS':
+      return { ...state, recallAlerts: action.payload };
     default:
       return state;
   }
@@ -59,9 +67,21 @@ interface PantryContextValue {
   markAsUsed: (id: string, type: ConsumptionType) => Promise<void>;
   setSearch: (q: string) => void;
   setFilter: (f: StorageLocation | 'all') => void;
+  dismissRecallAlert: (pairId: string) => Promise<void>;
 }
 
 const PantryContext = createContext<PantryContextValue | null>(null);
+
+async function fireRecallNotification(count: number): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '⚠️ Food Safety Alert',
+      body: `${count} recalled product${count !== 1 ? 's' : ''} found in your pantry — tap to review`,
+      data: { type: 'recall_alert' },
+    },
+    trigger: null,
+  });
+}
 
 export function PantryProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, {
@@ -70,7 +90,12 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     error: null,
     searchQuery: '',
     activeFilter: 'all',
+    recallAlerts: [],
   });
+
+  // Stable ref so AppState listener always sees latest items without re-subscribing.
+  const itemsRef = useRef<FoodItem[]>([]);
+  useEffect(() => { itemsRef.current = state.items; }, [state.items]);
 
   async function syncAll(items: FoodItem[]) {
     const enriched = items.map(enrichItem);
@@ -83,14 +108,49 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function checkRecalls(items: FoodItem[]) {
+    const should = await shouldRunCheck();
+    if (!should) return;
+    const alerts = await runRecallCheck(items);
+    dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
+    if (alerts.length > 0) fireRecallNotification(alerts.length).catch(() => {});
+  }
+
+  // ── Initial load ─────────────────────────────────────────────────────────
+
   useEffect(() => {
-    getAllItems()
+    cleanupExpiredItems(20)
+      .then((removed) => {
+        removed.forEach((item) => cancelItemNotifications(item.notificationIds).catch(() => {}));
+        return getAllItems();
+      })
       .then((items) => {
         dispatch({ type: 'LOAD_ITEMS', payload: items });
         syncAll(items).catch(() => {});
+
+        const expired = items.map(enrichItem).filter((i) => i.status === 'expired');
+        syncExpiredToShoppingList(expired).catch(() => {});
+
+        // Load any stored alerts from a previous check, then run today's check if needed.
+        getStoredAlerts()
+          .then((stored) => dispatch({ type: 'SET_RECALL_ALERTS', payload: stored }))
+          .catch(() => {});
+        checkRecalls(items).catch(() => {});
       })
       .catch((e) => dispatch({ type: 'SET_ERROR', payload: String(e) }));
   }, []);
+
+  // ── Foreground recall check (runs when app comes back from background) ───
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return;
+      checkRecalls(itemsRef.current).catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
+
+  // ── CRUD ─────────────────────────────────────────────────────────────────
 
   const addItem = useCallback(async (item: FoodItem) => {
     const ids = await scheduleItemNotification(item);
@@ -129,8 +189,16 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   const setSearch = useCallback((q: string) => dispatch({ type: 'SET_SEARCH', payload: q }), []);
   const setFilter = useCallback((f: StorageLocation | 'all') => dispatch({ type: 'SET_FILTER', payload: f }), []);
 
+  const dismissRecallAlert = useCallback(async (pairId: string) => {
+    dispatch({ type: 'SET_RECALL_ALERTS', payload: state.recallAlerts.filter((a) => a.pairId !== pairId) });
+    await dismissAlert(pairId);
+  }, [state.recallAlerts]);
+
   return (
-    <PantryContext.Provider value={{ state, addItem, updateItem, deleteItem, markAsUsed, setSearch, setFilter }}>
+    <PantryContext.Provider value={{
+      state, addItem, updateItem, deleteItem, markAsUsed,
+      setSearch, setFilter, dismissRecallAlert,
+    }}>
       {children}
     </PantryContext.Provider>
   );

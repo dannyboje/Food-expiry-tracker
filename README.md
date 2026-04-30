@@ -1,50 +1,74 @@
-# Welcome to your Expo app 👋
+# FreshAhead — Track it. Use it. Waste less.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+FreshAhead helps you take control of your food, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, and pantry.
 
-## Get started
+---
 
-1. Install dependencies
+## What you can do
 
-   ```bash
-   npm install
-   ```
+### Track your food
+- **Add items manually** — enter the name, category, storage location, quantity, and expiry date in seconds.
+- **Scan a barcode** — the app looks up the product on Open Food Facts and pre-fills the details automatically, including the Nutri-Score and NOVA processing group.
+- **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
 
-2. Start the app
+### Know what's expiring
+- **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired).
+- **Smart notifications** — get a push notification before something expires. The alert window adapts to shelf life: 1 day for very short-lived items, up to 30 days for long-shelf-life products.
+- **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they're automatically removed.
 
-   ```bash
-   npx expo start
-   ```
+### Food safety recalls
+- **Daily recall check** — every morning at 8 AM the app quietly checks the FDA and USDA FSIS food recall databases.
+- **Pantry matching** — if any recalled product matches something in your pantry, a red safety alert appears immediately on the pantry screen.
+- **Dismiss per item** — review each recall and dismiss alerts one by one, or clear them all at once.
 
-In the output, you'll find options to open the app in a
+### Shopping list
+- **Auto-restock expired items** — when something expires it's automatically added to your shopping list so you never forget to replace it.
+- **Manual additions** — type anything into the list, add it with one tap, and check it off as you shop.
+- **Edit on the fly** — tap the pencil icon to rename any item inline.
+- **Clear checked** — remove everything you've already bought with one tap.
+- **Restock badge** — items auto-added from your pantry are labelled so you always know why they're there.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Household
+- **Multiple members** — add everyone in your household and see who added each pantry item.
+- **Shared pantry** — all household members appear on item cards so there's no confusion about ownership.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Health & Nutrition
+- **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.
+- **NOVA group** — see the food processing level (1 = unprocessed, 4 = ultra-processed) for every scanned product.
+- **Consumption tracking** — mark items as "used" or "wasted" to build a picture of your household's food habits over time.
 
-## Get a fresh project
+### Settings & customisation
+- **Alert thresholds** — adjust how many days before expiry you want to be notified for each shelf-life tier.
+- **Daily digest** — opt in to a single daily summary notification instead of individual item alerts.
+- **Dark mode** — the app follows your system appearance automatically.
 
-When you're ready, run:
+---
+
+## Privacy
+
+All data — pantry items, photos, recall alerts — stays on your device. The app only makes outbound requests to:
+
+- **Open Food Facts** (barcode lookups)
+- **USDA FoodData Central** (nutrition data)
+- **openFDA / USDA FSIS** (daily food safety recall checks)
+
+No account required. No data is ever sent to any server we operate.
+
+---
+
+## Requirements
+
+- iOS 16 or later (iPhone / iPad)
+- Barcode scanning and expiry-date OCR require a device camera
+- Push notifications must be enabled for expiry and recall alerts
+
+---
+
+## Development setup
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Barcode scanning and on-device OCR (`@react-native-ml-kit/text-recognition`) require a [development build](https://docs.expo.dev/develop/development-builds/introduction/) via EAS — they are not available in Expo Go.

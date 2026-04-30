@@ -217,7 +217,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 ]}
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Beef rib-eye steak"
+                placeholder="e.g. Banana"
                 placeholderTextColor={colors.subtext}
                 returnKeyType="done"
               />
