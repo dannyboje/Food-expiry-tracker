@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -149,7 +149,14 @@ export default function HealthScreen() {
         onPress={() => router.push(`/item/${item.id}`)}
         activeOpacity={0.75}>
         <View style={styles.cardLeft}>
-          <Text style={styles.emoji}>{CATEGORY_ICONS[item.category] ?? '🍱'}</Text>
+          {item.expiryPhotoUri || item.nutritionPhotoUri ? (
+            <Image
+              source={{ uri: (item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+              style={styles.itemPhoto}
+            />
+          ) : (
+            <Text style={styles.emoji}>{CATEGORY_ICONS[item.category] ?? '🍱'}</Text>
+          )}
         </View>
         <View style={styles.cardInfo}>
           <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
@@ -389,6 +396,7 @@ const styles = StyleSheet.create({
   },
   scanIcon: { backgroundColor: '#EFF6FF' },
   emoji: { fontSize: 20 },
+  itemPhoto: { width: 40, height: 40, borderRadius: 20 },
   cardInfo: { flex: 1, gap: 3 },
   itemName: { fontSize: 15, fontWeight: '600' },
   scannedAt: { fontSize: 11, marginTop: 1 },
