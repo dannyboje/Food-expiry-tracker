@@ -1,21 +1,29 @@
 {
   "expo": {
-    "name": "Food-expiry-tracker",
-    "slug": "Food-expiry-tracker",
+    "name": "Fresh Track",
+    "slug": "freshahead",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "foodexpirytracker",
+    "scheme": "freshahead",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to scan barcodes and photograph expiry dates and nutrition labels.",
+        "NSPhotoLibraryUsageDescription": "Used to select photos of expiry dates and nutrition labels from your library.",
+        "NSUserNotificationsUsageDescription": "Used to alert you before food items expire."
+      }
     },
     "android": {
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
@@ -27,6 +35,14 @@
     },
     "plugins": [
       "expo-router",
+      "expo-camera",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#22C55E"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -38,7 +54,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-sqlite",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
