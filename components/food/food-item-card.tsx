@@ -1,6 +1,5 @@
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ExpiryBadge } from './expiry-badge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Brand, Colors } from '@/constants/theme';
@@ -43,8 +42,7 @@ interface Props {
 
 export function FoodItemCard({ item }: Props) {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[useColorScheme() ?? 'light'];
   const { markAsUsed } = usePantry();
 
   function handleLongPress() {
@@ -67,83 +65,97 @@ export function FoodItemCard({ item }: Props) {
   }
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.background,
-          borderBottomColor: colors.border,
-          borderLeftColor: STATUS_STRIPE[item.status],
-        },
-      ]}
-      onPress={() => router.push(`/item/${item.id}`)}
-      onLongPress={handleLongPress}
-      delayLongPress={400}
-      activeOpacity={0.7}>
-      <View style={styles.iconContainer}>
-        {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
-          <Image
-            source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
-            style={styles.itemPhoto}
-          />
-        ) : (
-          <Text style={styles.categoryEmoji}>{CATEGORY_ICONS[item.category]}</Text>
-        )}
-      </View>
-      <View style={styles.info}>
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-        <ExpiryBadge daysUntilExpiry={item.daysUntilExpiry} status={item.status} />
-      </View>
-      <View style={styles.meta}>
-        <Text style={[styles.quantity, { color: colors.text }]}>
-          {item.quantity} {item.quantityUnit}
-        </Text>
-        <Text style={[styles.location, { color: colors.subtext }]}>
-          {LOCATION_LABEL[item.storageLocation]}
-        </Text>
-        {(() => {
-          const score = computeScore(item.nutriScore, item.novaGroup, item.rawScore);
-          if (score === undefined) return null;
-          return (
-            <View style={[styles.scoreBadge, { backgroundColor: scoreColor(score) }]}>
-              <Text style={styles.scoreNumber}>{score}</Text>
-            </View>
-          );
-        })()}
-      </View>
-    </TouchableOpacity>
+    // Outer view carries the shadow; inner TouchableOpacity clips the stripe with overflow:hidden
+    <View style={[styles.cardShadow, { backgroundColor: colors.card }]}>
+      <TouchableOpacity
+        style={styles.cardInner}
+        onPress={() => router.push(`/item/${item.id}`)}
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+        activeOpacity={0.75}>
+        {/* Colored left stripe */}
+        <View style={[styles.stripe, { backgroundColor: STATUS_STRIPE[item.status] }]} />
+        <View style={[styles.iconContainer, { backgroundColor: colors.card }]}>
+          {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
+            <Image
+              source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+              style={styles.itemPhoto}
+            />
+          ) : (
+            <Text style={styles.categoryEmoji}>{CATEGORY_ICONS[item.category]}</Text>
+          )}
+        </View>
+        <View style={styles.info}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+          <ExpiryBadge daysUntilExpiry={item.daysUntilExpiry} status={item.status} />
+        </View>
+        <View style={styles.meta}>
+          <Text style={[styles.quantity, { color: colors.text }]}>
+            {item.quantity} {item.quantityUnit}
+          </Text>
+          <Text style={[styles.location, { color: colors.subtext }]}>
+            {LOCATION_LABEL[item.storageLocation]}
+          </Text>
+          {(() => {
+            const score = computeScore(item.nutriScore, item.novaGroup, item.rawScore);
+            if (score === undefined) return null;
+            return (
+              <View style={[styles.scoreBadge, { backgroundColor: scoreColor(score) }]}>
+                <Text style={styles.scoreNumber}>{score}</Text>
+              </View>
+            );
+          })()}
+        </View>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  // Shadow lives here so iOS renders it outside the card bounds
+  cardShadow: {
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  // overflow:hidden clips the stripe to the rounded corners
+  cardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: 4,
+    borderRadius: 14,
+    overflow: 'hidden',
+    paddingRight: 12,
+    paddingVertical: 13,
+  },
+  stripe: {
+    width: 4,
+    alignSelf: 'stretch',
+    marginRight: 12,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   categoryEmoji: {
-    fontSize: 20,
+    fontSize: 22,
   },
   itemPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   info: {
     flex: 1,
-    gap: 3,
+    gap: 4,
   },
   name: {
     fontSize: 15,

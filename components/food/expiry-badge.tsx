@@ -11,7 +11,7 @@ interface Props {
 const STATUS_COLORS: Record<ExpiryStatus, { text: string; bg: string }> = {
   expired: { text: Brand.red, bg: Brand.redLight },
   expiring_soon: { text: Brand.orange, bg: Brand.orangeLight },
-  fresh: { text: '#6B7280', bg: 'transparent' },
+  fresh: { text: '#15803D', bg: '#DCFCE7' },
 };
 
 export function ExpiryBadge({ daysUntilExpiry, status }: Props) {
@@ -19,7 +19,7 @@ export function ExpiryBadge({ daysUntilExpiry, status }: Props) {
   const label = formatExpiryLabel(daysUntilExpiry);
 
   return (
-    <View style={[styles.badge, status !== 'fresh' && { backgroundColor: colors.bg }]}>
+    <View style={[styles.badge, { backgroundColor: colors.bg }]}>
       <Text style={[styles.text, { color: colors.text }]}>{label}</Text>
     </View>
   );
@@ -27,9 +27,10 @@ export function ExpiryBadge({ daysUntilExpiry, status }: Props) {
 
 const styles = StyleSheet.create({
   badge: {
-    borderRadius: 4,
-    paddingHorizontal: 2,
-    paddingVertical: 1,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
   },
   text: {
     fontSize: 12,

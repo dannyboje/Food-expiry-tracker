@@ -135,7 +135,7 @@ export default function ShoppingScreen() {
         renderItem={({ item }) => {
           const isEditing = editingId === item.id;
           return (
-            <View style={[styles.row, { borderBottomColor: colors.border }]}>
+            <View style={[styles.row, { backgroundColor: colors.card }]}>
               {/* Checkbox */}
               <TouchableOpacity onPress={() => toggleItem(item.id)} style={styles.checkbox}>
                 <View style={[styles.checkboxInner, { borderColor: item.checked ? Brand.green : colors.border }]}>
@@ -244,14 +244,19 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, height: 46, fontSize: 15 },
   addBtn: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  list: { paddingBottom: 100 },
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
   empty: { textAlign: 'center', marginTop: 60, fontSize: 15 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   checkbox: { marginRight: 12 },
   checkboxInner: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
@@ -262,12 +267,12 @@ const styles = StyleSheet.create({
   qty: { fontSize: 12 },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 4,
-    paddingHorizontal: 6,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  badgeText: { fontSize: 11, fontWeight: '600', color: Brand.red },
+  badgeText: { fontSize: 11, fontWeight: '600', color: Brand.green },
   editInput: {
     fontSize: 15,
     borderBottomWidth: 1.5,

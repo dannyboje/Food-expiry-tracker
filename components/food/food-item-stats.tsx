@@ -26,7 +26,7 @@ export function FoodItemStats({ item }: Props) {
         : `in ${item.daysUntilExpiry} days${item.daysUntilExpiry <= 3 ? '!' : ''}`;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, borderColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={[styles.stat, styles.bordered, { borderRightColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.subtext }]}>In the pantry</Text>
         <Text style={[styles.value, { color: colors.text }]}>
@@ -52,11 +52,16 @@ export function FoodItemStats({ item }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
     marginHorizontal: 16,
     marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   stat: {
     flex: 1,

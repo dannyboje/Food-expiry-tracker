@@ -62,22 +62,15 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [unit, setUnit] = useState<QuantityUnit>(base?.quantityUnit ?? 'pcs');
   const [purchaseDate, setPurchaseDate] = useState(base?.purchaseDate ?? todayISO());
   const [expiryDate, setExpiryDate] = useState(base?.expiryDate ?? todayISO());
-  const [expiryPhotoUri, setExpiryPhotoUri] = useState<string | undefined>(base?.expiryPhotoUri);
   const [nutritionPhotoUri, setNutritionPhotoUri] = useState<string | undefined>(base?.nutritionPhotoUri);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Pick up photos returned from camera screens
+  // Pick up photo returned from nutrition camera screen
   useFocusEffect(
     useCallback(() => {
       const result = consumeCameraResult();
-      if (!result) return;
-      if (result.type === 'expiry') {
-        setExpiryPhotoUri(result.uri);
-        if (result.date) setExpiryDate(result.date);
-      } else {
-        setNutritionPhotoUri(result.uri);
-      }
+      if (result?.type === 'nutrition') setNutritionPhotoUri(result.uri);
     }, [])
   );
 
@@ -116,7 +109,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         novaGroup: base?.novaGroup,
         rawScore: base?.rawScore,
         addedBy,
-        expiryPhotoUri: expiryPhotoUri,
+        expiryPhotoUri: initialItem?.expiryPhotoUri,
         nutritionPhotoUri: nutritionPhotoUri,
         notificationIds: initialItem?.notificationIds ?? [],
         createdAt: initialItem?.createdAt ?? now,
@@ -139,10 +132,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
     } finally {
       setSaving(false);
     }
-  }
-
-  function openExpiryCamera() {
-    router.push('/camera/expiry');
   }
 
   function openNutritionCamera() {
@@ -232,23 +221,11 @@ export function AddEditForm({ initialItem, prefill }: Props) {
           </FormRow>
 
           <FormRow label="Expiry / best before">
-            <View style={styles.dateRow}>
-              <View style={{ flex: 1 }}>
-                <DatePickerField label="" value={expiryDate} onChange={setExpiryDate} />
-              </View>
-              <TouchableOpacity
-                style={[styles.iconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-                onPress={openExpiryCamera}>
-                <IconSymbol name="camera.fill" size={20} color={Brand.green} />
-              </TouchableOpacity>
-            </View>
-            {prefill?.expiryHint && !expiryPhotoUri && (
+            <DatePickerField label="" value={expiryDate} onChange={setExpiryDate} />
+            {prefill?.expiryHint && (
               <Text style={[styles.expiryHint, { color: Brand.green }]}>
                 💡 {prefill.expiryHint}
               </Text>
-            )}
-            {resolvePhotoUri(expiryPhotoUri) && (
-              <Image source={{ uri: resolvePhotoUri(expiryPhotoUri) }} style={styles.photoThumb} />
             )}
           </FormRow>
 
@@ -344,7 +321,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   photoBtn: {
     flexDirection: 'row',
     alignItems: 'center',

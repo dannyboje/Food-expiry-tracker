@@ -2,6 +2,7 @@ import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { FoodItemStats } from '@/components/food/food-item-stats';
 import { OFFNutritionPanel } from '@/components/food/off-nutrition-panel';
@@ -87,21 +88,33 @@ export default function ItemDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero header */}
-        <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>{CATEGORY_EMOJIS[item.category]}</Text>
-          <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.categoryLocation, { color: colors.subtext }]}>
-            {item.category.charAt(0).toUpperCase() + item.category.slice(1)} in{' '}
-            {LOCATION_LABEL[item.storageLocation]}
+        <LinearGradient
+          colors={['#F0FDF4', '#DCFCE7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}>
+          <View style={styles.heroIconWrap}>
+            {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
+              <Image
+                source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+                style={styles.heroPhoto}
+              />
+            ) : (
+              <Text style={styles.heroEmoji}>{CATEGORY_EMOJIS[item.category]}</Text>
+            )}
+          </View>
+          <Text style={[styles.itemName, { color: '#14532D' }]}>{item.name}</Text>
+          <Text style={[styles.categoryLocation, { color: '#15803D' }]}>
+            {item.category.charAt(0).toUpperCase() + item.category.slice(1)} · {LOCATION_LABEL[item.storageLocation]}
           </Text>
-        </View>
+        </LinearGradient>
 
         {/* Health score */}
         {(() => {
           const composite = computeScore(item.nutriScore, item.novaGroup, item.rawScore);
           if (composite === undefined) return null;
           return (
-            <View style={[styles.scoreCard, { borderColor: scoreColor(composite) }]}>
+            <View style={[styles.scoreCard, { borderColor: scoreColor(composite), backgroundColor: colors.card }]}>
               <View style={[styles.scoreCircle, { borderColor: scoreColor(composite) }]}>
                 <Text style={[styles.scoreNumber, { color: scoreColor(composite) }]}>{composite}</Text>
                 <Text style={[styles.scoreOutOf, { color: scoreColor(composite) }]}>/100</Text>
@@ -138,7 +151,7 @@ export default function ItemDetailScreen() {
 
         {/* Expiry date photo */}
         {resolvePhotoUri(item.expiryPhotoUri) && (
-          <View style={styles.section}>
+          <View style={[styles.section, styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Expiry Date Photo</Text>
             <Image source={{ uri: resolvePhotoUri(item.expiryPhotoUri) }} style={styles.photo} />
           </View>
@@ -146,25 +159,27 @@ export default function ItemDetailScreen() {
 
         {/* Nutrition photo */}
         {resolvePhotoUri(item.nutritionPhotoUri) && (
-          <View style={styles.section}>
+          <View style={[styles.section, styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Nutrition Info</Text>
             <Image source={{ uri: resolvePhotoUri(item.nutritionPhotoUri) }} style={styles.photo} />
           </View>
         )}
 
-        {/* Added by */}
-        {item.addedBy && (
-          <View style={[styles.section, styles.metaRow]}>
-            <IconSymbol name="person.fill" size={16} color={colors.subtext} />
-            <Text style={[styles.metaText, { color: colors.subtext }]}>Added by {item.addedBy}</Text>
-          </View>
-        )}
-
-        {/* Barcode */}
-        {item.barcode && (
-          <View style={[styles.section, styles.metaRow]}>
-            <IconSymbol name="barcode.viewfinder" size={16} color={colors.subtext} />
-            <Text style={[styles.metaText, { color: colors.subtext }]}>Barcode: {item.barcode}</Text>
+        {/* Added by / Barcode meta row */}
+        {(item.addedBy || item.barcode) && (
+          <View style={[styles.metaCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {item.addedBy && (
+              <View style={styles.metaRow}>
+                <IconSymbol name="person.fill" size={15} color={colors.subtext} />
+                <Text style={[styles.metaText, { color: colors.subtext }]}>Added by {item.addedBy}</Text>
+              </View>
+            )}
+            {item.barcode && (
+              <View style={[styles.metaRow, item.addedBy && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: 10 }]}>
+                <IconSymbol name="barcode.viewfinder" size={15} color={colors.subtext} />
+                <Text style={[styles.metaText, { color: colors.subtext }]}>Barcode: {item.barcode}</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -176,14 +191,52 @@ export default function ItemDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: { alignItems: 'center', paddingTop: 24, paddingBottom: 8, paddingHorizontal: 16, gap: 6 },
-  heroEmoji: { fontSize: 52 },
-  itemName: { fontSize: 28, fontWeight: '800', textAlign: 'center' },
-  categoryLocation: { fontSize: 14, fontWeight: '500' },
-  section: { marginHorizontal: 16, marginTop: 20, gap: 10 },
-  sectionTitle: { fontSize: 17, fontWeight: '700' },
-  photo: { width: '100%', height: 200, borderRadius: 12, resizeMode: 'cover' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  hero: { alignItems: 'center', paddingTop: 28, paddingBottom: 24, paddingHorizontal: 20, gap: 8 },
+  heroIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroEmoji: { fontSize: 44 },
+  heroPhoto: { width: 88, height: 88, borderRadius: 44 },
+  itemName: { fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  categoryLocation: { fontSize: 14, fontWeight: '600' },
+  section: { marginHorizontal: 16, marginTop: 16, gap: 10 },
+  photoCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  sectionTitle: { fontSize: 15, fontWeight: '700' },
+  photo: { width: '100%', height: 200, borderRadius: 10, resizeMode: 'cover' },
+  metaCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaText: { fontSize: 13 },
   headerRight: { flexDirection: 'row', gap: 4 },
   headerBtn: { padding: 8 },

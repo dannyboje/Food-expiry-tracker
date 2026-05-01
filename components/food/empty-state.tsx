@@ -20,14 +20,17 @@ export function EmptyState({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>🛒</Text>
+      <View style={styles.iconWrap}>
+        <Text style={styles.emoji}>🛒</Text>
+      </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.subtitle, { color: colors.subtext }]}>{subtitle}</Text>
       {showCTA && (
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/add-item')}>
-          <Text style={styles.buttonText}>Add Item</Text>
+          onPress={() => router.push('/add-item')}
+          activeOpacity={0.8}>
+          <Text style={styles.buttonText}>+ Add Item</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -41,28 +44,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
     paddingBottom: 80,
-    gap: 12,
+    gap: 14,
+  },
+  iconWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    shadowColor: Brand.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   emoji: {
-    fontSize: 56,
-    marginBottom: 4,
+    fontSize: 48,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 21,
+    fontWeight: '800',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   button: {
-    marginTop: 8,
+    marginTop: 6,
     backgroundColor: Brand.green,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: Brand.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
     color: '#fff',
