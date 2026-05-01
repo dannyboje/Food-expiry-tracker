@@ -18,8 +18,8 @@ export async function scheduleDailyRecallCheck(): Promise<void> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 8,
-      minute: 0,
+      hour: 9,
+      minute: 30,
     },
   });
   await KVStore.setItem(TRIGGER_ID_KEY, id);

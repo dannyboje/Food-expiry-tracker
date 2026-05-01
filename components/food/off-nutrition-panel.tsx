@@ -131,7 +131,7 @@ export function OFFNutritionPanel({ barcode, nutriScore, novaGroup }: Props) {
                     styles.gradeTile,
                     active
                       ? [styles.gradeTileActive, { backgroundColor: NUTRI_COLORS[g] }]
-                      : { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' },
+                      : { backgroundColor: '#E5E7EB' },
                   ]}>
                   <Text style={[styles.gradeLetter, { color: active ? '#fff' : colors.subtext }]}>
                     {g.toUpperCase()}
@@ -160,7 +160,7 @@ export function OFFNutritionPanel({ barcode, nutriScore, novaGroup }: Props) {
                     styles.novaCircle,
                     active
                       ? [styles.novaCircleActive, { backgroundColor: NOVA_COLORS[n] }]
-                      : { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' },
+                      : { backgroundColor: '#E5E7EB' },
                   ]}>
                   <Text style={[styles.gradeLetter, { color: active ? '#fff' : colors.subtext }]}>{n}</Text>
                 </View>

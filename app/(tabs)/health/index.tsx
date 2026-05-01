@@ -10,6 +10,7 @@ import { usePantry } from '@/hooks/use-pantry';
 import type { FoodItemWithStatus } from '@/types/food-item';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { getRecentScans, type RecentScan } from '@/utils/recent-scans-store';
+import { resolvePhotoUri } from '@/utils/photo-storage';
 
 const SCORE_COLOR: Record<string, string> = {
   a: '#1EA54C', b: '#85BB2F', c: '#F5C900', d: '#EF8714', e: '#E63E11',
@@ -149,9 +150,9 @@ export default function HealthScreen() {
         onPress={() => router.push(`/item/${item.id}`)}
         activeOpacity={0.75}>
         <View style={styles.cardLeft}>
-          {item.expiryPhotoUri || item.nutritionPhotoUri ? (
+          {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
             <Image
-              source={{ uri: (item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+              source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
               style={styles.itemPhoto}
             />
           ) : (
@@ -232,7 +233,7 @@ export default function HealthScreen() {
       <BgFoodDecor />
       {/* Gradient header */}
       <LinearGradient
-        colors={['#16A34A', '#22C55E', '#4ADE80']}
+        colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
@@ -240,9 +241,7 @@ export default function HealthScreen() {
         <SafeAreaView edges={['top']}>
           <View style={styles.header}>
             <Text style={styles.title}>❤️  Health Scores</Text>
-            <Text style={styles.subtitle}>
-              {scoredCount} pantry item{scoredCount !== 1 ? 's' : ''} rated · {sortedScans.length} recent scan{sortedScans.length !== 1 ? 's' : ''}
-            </Text>
+            <Text style={styles.subtitle}>Eat Right, Live Bright  💪</Text>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -337,8 +336,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGradient: { paddingBottom: 14 },
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: 28, fontWeight: '800', color: '#fff', textShadowColor: 'rgba(0,0,0,0.12)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  subtitle: { fontSize: 13, marginTop: 2, color: 'rgba(255,255,255,0.85)' },
+  title: { fontSize: 28, fontWeight: '800', color: '#166534' },
+  subtitle: { fontSize: 13, marginTop: 2, color: 'rgba(22, 101, 52, 0.75)', textAlign: 'right' },
   legend: {
     flexDirection: 'row',
     justifyContent: 'space-around',

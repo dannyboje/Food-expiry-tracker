@@ -12,8 +12,6 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
-
 import { LocationPicker } from './location-picker';
 import { CategoryPicker } from './category-picker';
 import { DatePickerField } from './date-picker-field';
@@ -27,6 +25,7 @@ import { todayISO } from '@/utils/food-item-utils';
 import { consumeCameraResult } from '@/utils/camera-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
+import { resolvePhotoUri } from '@/utils/photo-storage';
 import type { FoodCategory, FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
 
 interface Props {
@@ -45,13 +44,6 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-async function copyToDocuments(uri: string, itemId: string, type: 'expiry' | 'nutrition'): Promise<string> {
-  const dir = (FileSystem.documentDirectory ?? '') + 'photos/';
-  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  const dest = `${dir}${itemId}_${type}.jpg`;
-  await FileSystem.copyAsync({ from: uri, to: dest });
-  return dest;
-}
 
 export function AddEditForm({ initialItem, prefill }: Props) {
   const router = useRouter();
@@ -103,17 +95,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const now = new Date().toISOString();
       const itemId = initialItem?.id ?? generateId();
 
-      // Copy temp URIs to permanent document storage
-      let finalExpiryUri = expiryPhotoUri;
-      let finalNutritionUri = nutritionPhotoUri;
-      const docDir = FileSystem.documentDirectory ?? '';
-      if (expiryPhotoUri && !expiryPhotoUri.startsWith(docDir)) {
-        finalExpiryUri = await copyToDocuments(expiryPhotoUri, itemId, 'expiry');
-      }
-      if (nutritionPhotoUri && !nutritionPhotoUri.startsWith(docDir)) {
-        finalNutritionUri = await copyToDocuments(nutritionPhotoUri, itemId, 'nutrition');
-      }
-
       // Resolve who is adding this item (only for new items)
       let addedBy = initialItem?.addedBy;
       if (!isEdit) {
@@ -135,8 +116,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         novaGroup: base?.novaGroup,
         rawScore: base?.rawScore,
         addedBy,
-        expiryPhotoUri: finalExpiryUri,
-        nutritionPhotoUri: finalNutritionUri,
+        expiryPhotoUri: expiryPhotoUri,
+        nutritionPhotoUri: nutritionPhotoUri,
         notificationIds: initialItem?.notificationIds ?? [],
         createdAt: initialItem?.createdAt ?? now,
         updatedAt: now,
@@ -266,8 +247,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 💡 {prefill.expiryHint}
               </Text>
             )}
-            {expiryPhotoUri && (
-              <Image source={{ uri: expiryPhotoUri }} style={styles.photoThumb} />
+            {resolvePhotoUri(expiryPhotoUri) && (
+              <Image source={{ uri: resolvePhotoUri(expiryPhotoUri) }} style={styles.photoThumb} />
             )}
           </FormRow>
 
@@ -280,8 +261,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 {nutritionPhotoUri ? 'Retake photo' : 'Take photo'}
               </Text>
             </TouchableOpacity>
-            {nutritionPhotoUri && (
-              <Image source={{ uri: nutritionPhotoUri }} style={styles.photoThumb} />
+            {resolvePhotoUri(nutritionPhotoUri) && (
+              <Image source={{ uri: resolvePhotoUri(nutritionPhotoUri) }} style={styles.photoThumb} />
             )}
           </FormRow>
 

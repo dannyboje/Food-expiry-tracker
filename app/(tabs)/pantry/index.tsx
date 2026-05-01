@@ -12,6 +12,7 @@ import { NotificationBanner } from '@/components/ui/notification-banner';
 import { RecallAlertBanner } from '@/components/ui/recall-alert-banner';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePantry } from '@/hooks/use-pantry';
@@ -31,6 +32,8 @@ export default function PantryScreen() {
     setSearch(debounced);
   }, [debounced]);
 
+  if (state.isLoading) return <LoadingScreen />;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <BgFoodDecor />
@@ -38,7 +41,7 @@ export default function PantryScreen() {
 
       {/* Gradient header */}
       <LinearGradient
-        colors={['#16A34A', '#22C55E', '#4ADE80']}
+        colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
@@ -102,11 +105,7 @@ export default function PantryScreen() {
       />
 
       {/* Item list */}
-      {state.isLoading ? (
-        <View style={styles.center}>
-          <Text style={{ color: colors.subtext }}>Loading…</Text>
-        </View>
-      ) : filteredItems.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <EmptyState />
       ) : (
         <Animated.FlatList
@@ -152,14 +151,11 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.15)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: '#166534',
   },
   tagline: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(22, 101, 52, 0.75)',
     fontWeight: '500',
     letterSpacing: 0.3,
   },
@@ -217,10 +213,5 @@ const styles = StyleSheet.create({
   list: {
     paddingTop: 8,
     paddingBottom: 100,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

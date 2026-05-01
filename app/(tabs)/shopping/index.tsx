@@ -85,7 +85,7 @@ export default function ShoppingScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <BgFoodDecor />
       <LinearGradient
-        colors={['#16A34A', '#22C55E', '#4ADE80']}
+        colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
@@ -218,18 +218,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.12)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: '#166534',
   },
   autoAddedNote: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(22, 101, 52, 0.75)',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
   },
-  clearBtn: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '600', marginTop: 8 },
+  clearBtn: { color: 'rgba(22, 101, 52, 0.85)', fontSize: 14, fontWeight: '600', marginTop: 8 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

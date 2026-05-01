@@ -21,9 +21,10 @@ export interface RecallMatch {
 
 // ── KVStore keys ───────────────────────────────────────────────────────────
 
-const LAST_CHECK_KEY = '@recall_last_check';
-const ALERTS_KEY     = '@recall_alerts';
-const DISMISSED_KEY  = '@recall_dismissed';
+const LAST_CHECK_KEY   = '@recall_last_check';
+const ALERTS_KEY       = '@recall_alerts';
+const DISMISSED_KEY    = '@recall_dismissed';
+const RECALLS_CACHE_KEY = '@recall_cache';
 
 // ── API fetchers ───────────────────────────────────────────────────────────
 
@@ -55,7 +56,6 @@ async function fetchUSDARecalls(): Promise<RecallItem[]> {
   return rows.map((r, i) => ({
     id: String(r.RecallNumber ?? r.nid ?? `usda-${i}`),
     source: 'USDA' as const,
-    // FSIS API field names vary across versions — try all known variants
     productDescription: String(r.ProductName ?? r.field_title ?? r.RecallTitle ?? r.title ?? ''),
     reason: String(r.ReasonforRecall ?? r.field_recall_reason ?? r.Reason ?? ''),
     date: String(r.RecalledDate ?? r.field_recalled_date ?? ''),
@@ -64,7 +64,6 @@ async function fetchUSDARecalls(): Promise<RecallItem[]> {
 }
 
 // FSA Food Alerts API (UK Food Standards Agency) — free, no key required.
-// Docs: https://data.food.gov.uk/food-alerts/v1/
 async function fetchFSARecalls(): Promise<RecallItem[]> {
   const res = await fetch(
     'https://data.food.gov.uk/food-alerts/v1/?limit=50&sort=-modified',
@@ -73,15 +72,34 @@ async function fetchFSARecalls(): Promise<RecallItem[]> {
   if (!res.ok) return [];
   const json = await res.json() as { items?: Record<string, unknown>[] };
   return (json.items ?? []).map((r, i) => {
-    // productDetails is an array; join all product names for matching.
-    const details = Array.isArray(r.productDetails) ? r.productDetails as Record<string, string>[] : [];
-    const productDescription = details
-      .map((d) => [d.productName, d.brandName].filter(Boolean).join(' '))
-      .filter(Boolean)
-      .join(', ') || String(r.title ?? '');
-    const problem = Array.isArray(r.problem) ? r.problem as Record<string, string>[] : [];
-    const reason = problem.map((p) => p.description).filter(Boolean).join('; ')
+    // productDetails can be an array or a single object — handle both.
+    const rawDetails = r.productDetails;
+    const details: Record<string, string>[] = Array.isArray(rawDetails)
+      ? rawDetails as Record<string, string>[]
+      : rawDetails && typeof rawDetails === 'object'
+        ? [rawDetails as Record<string, string>]
+        : [];
+
+    // Try both camelCase and snake_case field names used by different FSA API versions.
+    const productDescription = details.length > 0
+      ? details
+          .map((d) => [
+            d.productName ?? d.product_name ?? d.name ?? '',
+            d.brandName  ?? d.brand_name  ?? d.brand ?? '',
+          ].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join(', ')
+      // Fall back to the alert title — still useful for substring matching
+      : String(r.title ?? r.shortTitle ?? r.alertTitle ?? '');
+
+    const problem = Array.isArray(r.problem)
+      ? r.problem as Record<string, string>[]
+      : r.problem && typeof r.problem === 'object'
+        ? [r.problem as Record<string, string>]
+        : [];
+    const reason = problem.map((p) => p.description ?? p.type ?? '').filter(Boolean).join('; ')
       || String(r.description ?? r.riskStatement ?? '');
+
     return {
       id: String(r.id ?? `fsa-${i}`),
       source: 'FSA' as const,
@@ -95,13 +113,12 @@ async function fetchFSARecalls(): Promise<RecallItem[]> {
 
 // ── Keyword matching ───────────────────────────────────────────────────────
 
-// Words that appear in food recall text but carry no signal for matching.
 const STOP_WORDS = new Set([
   'with', 'from', 'that', 'this', 'have', 'each', 'than', 'them',
   'they', 'will', 'been', 'were', 'said', 'what', 'when', 'your',
   'also', 'into', 'more', 'some', 'such', 'used', 'most', 'over',
   'only', 'both', 'very', 'brand', 'item', 'items', 'food', 'product',
-  'products', 'size', 'pack', 'case', 'label',
+  'products', 'size', 'pack', 'case', 'label', 'alert', 'recall',
 ]);
 
 function tokenize(text: string): string[] {
@@ -109,7 +126,35 @@ function tokenize(text: string): string[] {
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+    // Fix: was > 3, missing common 3-letter food words (ham, egg, cod, oat, etc.)
+    .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
+}
+
+function itemMatchesRecall(itemName: string, recallDescription: string): boolean {
+  if (!recallDescription) return false;
+
+  const itemLower  = itemName.trim().toLowerCase();
+  const recallLower = recallDescription.toLowerCase();
+
+  // 1. Direct substring match — most reliable signal.
+  //    "Smoked Salmon" inside "Scottish Smoked Salmon Fillets" → match.
+  if (recallLower.includes(itemLower)) return true;
+
+  // 2. All significant words from item name appear somewhere in the recall text.
+  //    Guards against the item being a single generic word (e.g. "milk").
+  const itemTokens = tokenize(itemName);
+  if (itemTokens.length >= 2) {
+    if (itemTokens.every((t) => recallLower.includes(t))) return true;
+  }
+
+  // 3. Token-level intersection — at least one meaningful word matches.
+  //    Also catches partial stems: "chicken" matches "chickens", "chickpeas" would not.
+  const recallTokens = new Set(tokenize(recallDescription));
+  return itemTokens.some((t) =>
+    recallTokens.has(t) ||
+    // Simple stem check: recall token starts with item token (plural/suffix handling)
+    [...recallTokens].some((rt) => rt.startsWith(t) && rt.length <= t.length + 3)
+  );
 }
 
 function matchRecalls(
@@ -119,14 +164,11 @@ function matchRecalls(
 ): RecallMatch[] {
   const matches: RecallMatch[] = [];
   for (const item of items) {
-    const itemTokens = tokenize(item.name);
-    if (itemTokens.length === 0) continue;
+    if (!item.name.trim()) continue;
     for (const recall of recalls) {
-      if (!recall.productDescription) continue;
       const pairId = `${recall.id}:${item.id}`;
       if (dismissed.has(pairId)) continue;
-      const recallTokens = new Set(tokenize(recall.productDescription));
-      if (itemTokens.some((t) => recallTokens.has(t))) {
+      if (itemMatchesRecall(item.name, recall.productDescription)) {
         matches.push({ pairId, pantryItemId: item.id, pantryItemName: item.name, recall });
       }
     }
@@ -164,7 +206,6 @@ export async function dismissAlert(pairId: string): Promise<void> {
   const dismissed = await getDismissed();
   dismissed.add(pairId);
   await KVStore.setItem(DISMISSED_KEY, JSON.stringify([...dismissed]));
-  // Also prune from stored alerts so they don't reappear on cold start.
   const alerts = await getStoredAlerts();
   await storeAlerts(alerts.filter((a) => a.pairId !== pairId));
 }
@@ -172,6 +213,19 @@ export async function dismissAlert(pairId: string): Promise<void> {
 export async function shouldRunCheck(): Promise<boolean> {
   const last = await getLastCheckDate();
   return last !== new Date().toISOString().split('T')[0];
+}
+
+// Re-run matching against cached recalls without hitting the network.
+// Used when items are added/updated mid-day so new items are checked immediately.
+export async function runMatchOnCachedRecalls(items: FoodItem[]): Promise<RecallMatch[]> {
+  const raw = await KVStore.getItem(RECALLS_CACHE_KEY);
+  if (!raw) return [];
+  let cached: RecallItem[];
+  try { cached = JSON.parse(raw) as RecallItem[]; } catch { return []; }
+  const dismissed = await getDismissed();
+  const matches = matchRecalls(cached, items, dismissed);
+  await storeAlerts(matches);
+  return matches;
 }
 
 // ── Main entry point ───────────────────────────────────────────────────────
@@ -187,6 +241,13 @@ export async function runRecallCheck(items: FoodItem[]): Promise<RecallMatch[]> 
     ...(usdaResult.status === 'fulfilled' ? usdaResult.value : []),
     ...(fsaResult.status === 'fulfilled' ? fsaResult.value : []),
   ];
+
+  // Cache the fetched recalls so mid-day item additions can match against them
+  // without another network round-trip.
+  if (allRecalls.length > 0) {
+    await KVStore.setItem(RECALLS_CACHE_KEY, JSON.stringify(allRecalls));
+  }
+
   const dismissed = await getDismissed();
   const matches = matchRecalls(allRecalls, items, dismissed);
   await storeAlerts(matches);

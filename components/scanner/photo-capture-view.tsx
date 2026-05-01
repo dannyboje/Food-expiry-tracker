@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { documentDirectory, copyAsync, makeDirectoryAsync } from 'expo-file-system/legacy';
 import { Brand } from '@/constants/theme';
+import { persistPhoto, resolvePhotoUri } from '@/utils/photo-storage';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface Props {
@@ -19,13 +19,6 @@ interface Props {
   hint?: string;
 }
 
-async function persistPhoto(tempUri: string, suffix: string): Promise<string> {
-  const dir = (documentDirectory ?? '') + 'photos/';
-  await makeDirectoryAsync(dir, { intermediates: true });
-  const dest = dir + Date.now() + '_' + suffix + '.jpg';
-  await copyAsync({ from: tempUri, to: dest });
-  return dest;
-}
 
 export function PhotoCaptureView({ onCapture, onCancel, hint }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -86,7 +79,7 @@ export function PhotoCaptureView({ onCapture, onCancel, hint }: Props) {
   if (preview) {
     return (
       <View style={styles.previewContainer}>
-        <Image source={{ uri: preview }} style={styles.preview} />
+        <Image source={{ uri: resolvePhotoUri(preview) }} style={styles.preview} />
         <View style={styles.previewActions}>
           <TouchableOpacity style={styles.retakeBtn} onPress={() => setPreview(null)}>
             <Text style={styles.retakeBtnText}>Retake</Text>

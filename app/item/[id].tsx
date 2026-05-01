@@ -11,6 +11,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePantry } from '@/hooks/use-pantry';
 import { enrichItem } from '@/utils/food-item-utils';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
+import { resolvePhotoUri } from '@/utils/photo-storage';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   dairy: '🥛', meat: '🥩', seafood: '🐟', produce: '🥦',
@@ -136,18 +137,18 @@ export default function ItemDetailScreen() {
         )}
 
         {/* Expiry date photo */}
-        {item.expiryPhotoUri && (
+        {resolvePhotoUri(item.expiryPhotoUri) && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Expiry Date Photo</Text>
-            <Image source={{ uri: item.expiryPhotoUri }} style={styles.photo} />
+            <Image source={{ uri: resolvePhotoUri(item.expiryPhotoUri) }} style={styles.photo} />
           </View>
         )}
 
         {/* Nutrition photo */}
-        {item.nutritionPhotoUri && (
+        {resolvePhotoUri(item.nutritionPhotoUri) && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Nutrition Info</Text>
-            <Image source={{ uri: item.nutritionPhotoUri }} style={styles.photo} />
+            <Image source={{ uri: resolvePhotoUri(item.nutritionPhotoUri) }} style={styles.photo} />
           </View>
         )}
 

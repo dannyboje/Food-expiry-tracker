@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Brand, Colors } from '@/constants/theme';
 import type { FoodCategory, FoodItemWithStatus } from '@/types/food-item';
 import { computeScore, scoreColor } from '@/utils/food-score';
+import { resolvePhotoUri } from '@/utils/photo-storage';
 import { usePantry } from '@/hooks/use-pantry';
 
 const STATUS_STRIPE: Record<string, string> = {
@@ -80,9 +81,9 @@ export function FoodItemCard({ item }: Props) {
       delayLongPress={400}
       activeOpacity={0.7}>
       <View style={styles.iconContainer}>
-        {item.expiryPhotoUri || item.nutritionPhotoUri ? (
+        {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
           <Image
-            source={{ uri: (item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+            source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
             style={styles.itemPhoto}
           />
         ) : (

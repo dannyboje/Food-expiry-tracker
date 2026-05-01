@@ -7,8 +7,8 @@ import { scheduleItemNotification, cancelItemNotifications } from '@/utils/notif
 import { recordConsumption, type ConsumptionType } from '@/utils/consumption-store';
 import { enrichItem } from '@/utils/food-item-utils';
 import { syncWidgetData, scheduleDailyDigest, cancelDailyDigest, DIGEST_ENABLED_KEY } from '@/utils/widget-data-sync';
-import { syncExpiredToShoppingList } from '@/utils/shopping-store';
-import { runRecallCheck, shouldRunCheck, getStoredAlerts, dismissAlert, type RecallMatch } from '@/utils/recall-checker';
+import { syncExpiredToShoppingList, addRemovedToShoppingList } from '@/utils/shopping-store';
+import { runRecallCheck, runMatchOnCachedRecalls, shouldRunCheck, getStoredAlerts, dismissAlert, type RecallMatch } from '@/utils/recall-checker';
 import KVStore from 'expo-sqlite/kv-store';
 
 interface PantryState {
@@ -121,7 +121,10 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     cleanupExpiredItems(20)
       .then((removed) => {
-        removed.forEach((item) => cancelItemNotifications(item.notificationIds).catch(() => {}));
+        removed.forEach((item) => {
+          cancelItemNotifications(item.notificationIds).catch(() => {});
+          addRemovedToShoppingList(item).catch(() => {});
+        });
         return getAllItems();
       })
       .then((items) => {
@@ -157,7 +160,17 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     const itemWithIds: FoodItem = { ...item, notificationIds: ids, updatedAt: new Date().toISOString() };
     await insertItem(itemWithIds);
     dispatch({ type: 'ADD_ITEM', payload: itemWithIds });
-    syncAll([...state.items, itemWithIds]).catch(() => {});
+    const newList = [...state.items, itemWithIds];
+    syncAll(newList).catch(() => {});
+    // Immediately check the new item against cached recalls (no network call needed).
+    runMatchOnCachedRecalls(newList)
+      .then((alerts) => {
+        if (alerts.length > 0) {
+          dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
+          fireRecallNotification(alerts.length).catch(() => {});
+        }
+      })
+      .catch(() => {});
   }, [state.items]);
 
   const updateItem = useCallback(async (item: FoodItem) => {
@@ -165,12 +178,25 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     const updated: FoodItem = { ...item, notificationIds: ids, updatedAt: new Date().toISOString() };
     await dbUpdateItem(updated);
     dispatch({ type: 'UPDATE_ITEM', payload: updated });
-    syncAll(state.items.map((i) => (i.id === updated.id ? updated : i))).catch(() => {});
+    const newList = state.items.map((i) => (i.id === updated.id ? updated : i));
+    syncAll(newList).catch(() => {});
+    // Re-check immediately in case the item name was changed to match a recall.
+    runMatchOnCachedRecalls(newList)
+      .then((alerts) => {
+        if (alerts.length > 0) {
+          dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
+          fireRecallNotification(alerts.length).catch(() => {});
+        }
+      })
+      .catch(() => {});
   }, [state.items]);
 
   const deleteItem = useCallback(async (id: string) => {
     const item = state.items.find((i) => i.id === id);
-    if (item) await cancelItemNotifications(item.notificationIds);
+    if (item) {
+      await cancelItemNotifications(item.notificationIds);
+      addRemovedToShoppingList(item).catch(() => {});
+    }
     await dbDeleteItem(id);
     dispatch({ type: 'DELETE_ITEM', payload: id });
     syncAll(state.items.filter((i) => i.id !== id)).catch(() => {});
@@ -184,6 +210,7 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     await dbDeleteItem(id);
     dispatch({ type: 'DELETE_ITEM', payload: id });
     syncAll(state.items.filter((i) => i.id !== id)).catch(() => {});
+    addRemovedToShoppingList(item).catch(() => {});
   }, [state.items]);
 
   const setSearch = useCallback((q: string) => dispatch({ type: 'SET_SEARCH', payload: q }), []);

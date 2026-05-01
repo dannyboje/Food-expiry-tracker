@@ -4,10 +4,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import KVStore from 'expo-sqlite/kv-store';
-import { getConsumptionStats, type ConsumptionStats } from '@/utils/consumption-store';
+import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
 import { DIGEST_ENABLED_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
 import { usePantry } from '@/hooks/use-pantry';
 
@@ -115,8 +116,11 @@ export default function HouseholdScreen() {
       .then((val) => { if (val !== null) setDigestEnabled(val === 'true'); })
       .catch(() => {});
     getAlertThresholds().then(setThresholds).catch(() => {});
-    getConsumptionStats().then(setConsumptionStats).catch(() => {});
   }, []);
+
+  useFocusEffect(useCallback(() => {
+    getConsumptionStats().then(setConsumptionStats).catch(() => {});
+  }, []));
 
   async function toggleNotifications(value: boolean) {
     setNotificationsEnabled(value);
@@ -239,6 +243,24 @@ export default function HouseholdScreen() {
     }
   }
 
+  function handleResetStats() {
+    Alert.alert(
+      'Reset Food Waste Tracker?',
+      'This will permanently delete all your usage and waste history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset', style: 'destructive',
+          onPress: async () => {
+            await resetConsumptionEvents();
+            const fresh = await getConsumptionStats();
+            setConsumptionStats(fresh);
+          },
+        },
+      ],
+    );
+  }
+
   function copyCode() {
     if (!profile) return;
     Clipboard.setString(profile.householdCode);
@@ -254,7 +276,7 @@ export default function HouseholdScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <BgFoodDecor />
         <LinearGradient
-          colors={['#16A34A', '#22C55E', '#4ADE80']}
+          colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.setupGradient}>
@@ -331,7 +353,7 @@ export default function HouseholdScreen() {
       <BgFoodDecor />
       {/* Gradient header */}
       <LinearGradient
-        colors={['#16A34A', '#22C55E', '#4ADE80']}
+        colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.dashGradient}>
@@ -371,7 +393,7 @@ export default function HouseholdScreen() {
                   returnKeyType="done"
                 />
                 <TouchableOpacity onPress={handleSaveHouseholdName} style={styles.editSaveBtn}>
-                  <IconSymbol name="checkmark" size={18} color="#fff" />
+                  <IconSymbol name="checkmark" size={18} color="#166534" />
                 </TouchableOpacity>
               </View>
             ) : (
@@ -379,7 +401,7 @@ export default function HouseholdScreen() {
                 onPress={() => { setEditedName(p.householdName); setEditingName(true); }}
                 style={styles.householdNameBtn}>
                 <Text style={styles.householdName}>{p.householdName}</Text>
-                <IconSymbol name="pencil" size={14} color="rgba(255,255,255,0.7)" />
+                <IconSymbol name="pencil" size={14} color="rgba(22, 101, 52, 0.6)" />
               </TouchableOpacity>
             )}
           </View>
@@ -508,6 +530,10 @@ export default function HouseholdScreen() {
               <Text style={[styles.statsHint, { color: colors.subtext }]}>
                 Long-press any pantry item to mark it as used or wasted.
               </Text>
+              <TouchableOpacity onPress={handleResetStats} style={styles.resetBtn}>
+                <IconSymbol name="arrow.counterclockwise" size={13} color="#EF4444" />
+                <Text style={styles.resetBtnText}>Reset tracker</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -613,8 +639,8 @@ const styles = StyleSheet.create({
 
   // Setup
   setupGradient: { paddingBottom: 20 },
-  setupHeaderTitle: { fontSize: 24, fontWeight: '800', color: '#fff', paddingHorizontal: 20, paddingTop: 12 },
-  setupHeaderSub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', paddingHorizontal: 20, marginTop: 2 },
+  setupHeaderTitle: { fontSize: 24, fontWeight: '800', color: '#166534', paddingHorizontal: 20, paddingTop: 12 },
+  setupHeaderSub: { fontSize: 14, color: 'rgba(22, 101, 52, 0.75)', paddingHorizontal: 20, marginTop: 2 },
   setupForm: { padding: 16, gap: 0 },
   setupCard: { gap: 4 },
   setupLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 4, marginTop: 4 },
@@ -638,18 +664,18 @@ const styles = StyleSheet.create({
   dashGradient: { paddingBottom: 16 },
   dashHeader: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 14 },
   dashNameBlock: { flex: 1 },
-  dashWelcome: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
-  dashName: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  dashWelcome: { color: 'rgba(22, 101, 52, 0.7)', fontSize: 13 },
+  dashName: { color: '#166534', fontSize: 22, fontWeight: '800' },
   avatarContainer: { position: 'relative' },
   avatarImage: {
     width: 56, height: 56, borderRadius: 28,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)',
+    borderWidth: 2, borderColor: 'rgba(22, 101, 52, 0.35)',
   },
   avatarEmoji: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    borderWidth: 2, borderColor: 'rgba(22, 101, 52, 0.25)',
   },
   avatarEmojiText: { fontSize: 26 },
   avatarEditBadge: {
@@ -661,15 +687,15 @@ const styles = StyleSheet.create({
   },
   householdNameRow: { paddingHorizontal: 20, paddingBottom: 4 },
   householdNameBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  householdName: { color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: '600' },
+  householdName: { color: 'rgba(22, 101, 52, 0.85)', fontSize: 15, fontWeight: '600' },
   editNameRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   editNameInput: {
-    flex: 1, color: '#fff', borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.5)', fontSize: 15, paddingVertical: 4,
+    flex: 1, color: '#166534', borderBottomWidth: 1,
+    borderBottomColor: 'rgba(22, 101, 52, 0.3)', fontSize: 15, paddingVertical: 4,
   },
   editSaveBtn: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(22, 101, 52, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -745,4 +771,9 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 28, fontWeight: '900' },
   statLabel: { fontSize: 11, textAlign: 'center' },
   statsHint: { fontSize: 12, marginTop: 10, lineHeight: 16 },
+  resetBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-end', marginTop: 12, padding: 6,
+  },
+  resetBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
 });

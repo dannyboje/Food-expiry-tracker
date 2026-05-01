@@ -1,5 +1,5 @@
 import KVStore from 'expo-sqlite/kv-store';
-import type { FoodItemWithStatus } from '@/types/food-item';
+import type { FoodItem, FoodItemWithStatus } from '@/types/food-item';
 
 export interface ShoppingItem {
   id: string;
@@ -20,6 +20,22 @@ export async function getShoppingList(): Promise<ShoppingItem[]> {
 
 export async function saveShoppingList(items: ShoppingItem[]): Promise<void> {
   await KVStore.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+// Adds a single pantry item to the shopping list (e.g. after deletion or wasting).
+// Skips if the item is already present by pantryId so re-runs are safe.
+export async function addRemovedToShoppingList(item: FoodItem): Promise<void> {
+  const current = await getShoppingList();
+  if (current.some((i) => i.pantryId === item.id)) return;
+  const entry: ShoppingItem = {
+    id: `pantry_${item.id}`,
+    name: item.name,
+    quantity: item.quantity && item.quantityUnit ? `${item.quantity} ${item.quantityUnit}` : undefined,
+    checked: false,
+    fromPantry: true,
+    pantryId: item.id,
+  };
+  await saveShoppingList([entry, ...current]);
 }
 
 // Adds expired pantry items that are not already in the list (by pantryId).
