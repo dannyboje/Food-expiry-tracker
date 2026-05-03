@@ -9,6 +9,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.freshahead.app",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Used to scan barcodes and photograph expiry dates and nutrition labels.",
@@ -19,7 +20,8 @@
     "android": {
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
@@ -61,6 +63,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0f39dedf-cb8d-40e8-852d-dac644a1cb8b"
+      }
+    },
+    "owner": "kumar.kunche"
   }
 }

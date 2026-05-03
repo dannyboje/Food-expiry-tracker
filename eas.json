@@ -18,6 +18,11 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "kumar.kunche@icloud.com",
+        "ascAppId": "6766026185"
+      }
+    }
   }
 }
