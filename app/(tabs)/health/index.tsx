@@ -126,13 +126,12 @@ export default function HealthScreen() {
     listData.push(...visibleScans.map((scan): ListItem => ({ kind: 'scan', scan })));
   }
 
-  // Counts for legend badges
+  // Counts for legend badges — pantry items only, not recently scanned
   const gradeCount = (grade: string) =>
-    ([...enrichedItems, ...sortedScans] as { nutriScore?: string; novaGroup?: number; rawScore?: number }[])
-      .filter((i) => {
-        const s = computeScore(i.nutriScore, i.novaGroup, i.rawScore);
-        return s !== undefined && effectiveGrade(s) === grade;
-      }).length;
+    enrichedItems.filter((i) => {
+      const s = computeScore(i.nutriScore, i.novaGroup, i.rawScore);
+      return s !== undefined && effectiveGrade(s) === grade;
+    }).length;
 
   const scoredCount = enrichedItems.filter(
     (i) => computeScore(i.nutriScore, i.novaGroup, i.rawScore) !== undefined
