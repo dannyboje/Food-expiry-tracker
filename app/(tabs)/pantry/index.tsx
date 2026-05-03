@@ -51,7 +51,7 @@ export default function PantryScreen() {
             <View style={styles.brandRow}>
               <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
               <View>
-                <Text style={styles.appName}>Fresh Track</Text>
+                <Text style={styles.appName}>Fresh Ahead</Text>
                 <Text style={styles.tagline}>Track it. Use it. Waste less.</Text>
               </View>
             </View>

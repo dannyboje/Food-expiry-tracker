@@ -620,7 +620,7 @@ export default function HouseholdScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.settingsRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
             <Text style={[styles.settingsRowTitle, { color: colors.text }]}>App Name</Text>
-            <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>Fresh Track</Text>
+            <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>Fresh Ahead</Text>
           </View>
           <View style={styles.settingsRow}>
             <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Version</Text>
