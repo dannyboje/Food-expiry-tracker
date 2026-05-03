@@ -105,22 +105,25 @@ export default function PantryScreen() {
       />
 
       {/* Item list */}
-      {filteredItems.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <Animated.FlatList
-          itemLayoutAnimation={LinearTransition}
-          data={filteredItems}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Animated.View entering={FadeIn}>
-              <FoodItemCard item={item} />
-            </Animated.View>
-          )}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <View style={styles.listContainer}>
+        {filteredItems.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Animated.FlatList
+            itemLayoutAnimation={LinearTransition}
+            data={filteredItems}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <Animated.View entering={FadeIn}>
+                <FoodItemCard item={item} />
+              </Animated.View>
+            )}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            style={styles.flatList}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -209,6 +212,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Brand.red,
     textAlign: 'center',
+  },
+  listContainer: {
+    flex: 1,
+  },
+  flatList: {
+    flex: 1,
   },
   list: {
     paddingTop: 8,
