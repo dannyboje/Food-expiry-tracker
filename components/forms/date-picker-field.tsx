@@ -11,7 +11,9 @@ interface Props {
 }
 
 function toDate(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
+  const parts = iso.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return new Date();
+  const [y, m, d] = parts;
   return new Date(y, m - 1, d);
 }
 

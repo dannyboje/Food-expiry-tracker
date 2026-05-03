@@ -61,7 +61,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [quantity, setQuantity] = useState(base?.quantity ?? 1);
   const [unit, setUnit] = useState<QuantityUnit>(base?.quantityUnit ?? 'pcs');
   const [purchaseDate, setPurchaseDate] = useState(base?.purchaseDate ?? todayISO());
-  const [expiryDate, setExpiryDate] = useState(base?.expiryDate ?? todayISO());
+  const [expiryDate, setExpiryDate] = useState(base?.expiryDate || todayISO());
   const [nutritionPhotoUri, setNutritionPhotoUri] = useState<string | undefined>(base?.nutritionPhotoUri);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

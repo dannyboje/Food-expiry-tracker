@@ -115,7 +115,7 @@ function fetchWithTimeout(url: string, ms = 8000): Promise<Response> {
 }
 
 export async function lookupBarcodeOnUsda(barcode: string): Promise<UsdaResult> {
-  if (USDA_API_KEY === 'YOUR_USDA_API_KEY') return {};
+  if (!USDA_API_KEY) return {};
 
   try {
     // FoodData Central barcode search — GTIN/UPC barcodes map directly

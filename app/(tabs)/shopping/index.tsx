@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Alert, FlatList, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
 import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,11 +24,11 @@ export default function ShoppingScreen() {
   const [editingName, setEditingName] = useState('');
   const editRef = useRef<TextInput>(null);
 
-  useEffect(() => {
-    getShoppingList()
-      .then(setItems)
-      .catch(() => {});
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getShoppingList().then(setItems).catch(() => {});
+    }, [])
+  );
 
   const persist = useCallback(async (next: ShoppingItem[]) => {
     setItems(next);
