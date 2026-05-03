@@ -1,6 +1,6 @@
-# Fresh Track — Track it. Use it. Waste less.
+# Fresh Ahead — Track it. Use it. Waste less.
 
-Fresh Track helps you take control of your food, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, and pantry.
+Fresh Ahead helps you take control of your food, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, and pantry.
 
 ---
 

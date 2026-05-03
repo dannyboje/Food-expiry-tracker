@@ -70,7 +70,7 @@ export async function scheduleDailyDigest(items: FoodItemWithStatus[]): Promise<
   try {
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Fresh Track — Daily Pantry Update',
+        title: 'Fresh Ahead — Daily Pantry Update',
         body,
         sound: true,
       },
