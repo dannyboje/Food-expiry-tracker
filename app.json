@@ -19,6 +19,7 @@
       }
     },
     "android": {
+      "package": "com.freshahead.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",

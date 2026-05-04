@@ -23,6 +23,10 @@
       "ios": {
         "appleId": "kumar.kunche@icloud.com",
         "ascAppId": "6766026185"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
       }
     }
   }
