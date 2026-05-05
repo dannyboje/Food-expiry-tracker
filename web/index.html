@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fresh Ahead — Track it. Use it. Waste less.</title>
+  <meta name="description" content="Fresh Ahead keeps your fridge, freezer, and pantry organised so you always know what's in date and what needs to be used first." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #22C55E;
+      --green-dark: #166534;
+      --green-mid:  #15803D;
+      --green-light:#F0FDF4;
+      --green-pale: #DCFCE7;
+      --text:       #111827;
+      --subtext:    #6B7280;
+      --border:     #E5E7EB;
+      --white:      #ffffff;
+      --radius:     16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--white);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── LOGO MARK (CSS — no image needed in nav) ── */
+    .logo-mark {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: linear-gradient(135deg, #22C55E, #166534);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .app-icon {
+      width: 110px; height: 110px;
+      border-radius: 26px;
+      object-fit: cover;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      margin-bottom: 24px;
+      /* Fallback background if image fails to load */
+      background: linear-gradient(135deg, #8BD1A5, #22C55E);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .app-icon-wrap {
+      display: flex; justify-content: center; margin-bottom: 24px;
+    }
+    .app-icon-wrap img {
+      width: 110px; height: 110px;
+      border-radius: 26px;
+      object-fit: cover;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .app-icon-fallback {
+      width: 110px; height: 110px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, #8BD1A5, #166534);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+
+    /* ── HERO ── */
+    .fa-hero {
+      background: linear-gradient(135deg, #8BD1A5 0%, #91E2AF 50%, #A5EFC0 100%);
+      padding: 72px 24px 56px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .fa-hero::before {
+      content: "🍎🥛🥦🧀🥕🍞";
+      position: absolute; top: -10px; left: 0; right: 0;
+      font-size: 80px; opacity: 0.06; letter-spacing: 12px;
+      white-space: nowrap; overflow: hidden; pointer-events: none;
+    }
+    .fa-hero h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 900;
+      color: var(--green-dark);
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+    .fa-hero p {
+      font-size: clamp(15px, 2.2vw, 18px);
+      color: rgba(22,101,52,0.82);
+      max-width: 520px; margin: 0 auto 32px;
+    }
+    .store-btns {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    }
+    .store-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--green-dark); color: #fff;
+      padding: 11px 20px; border-radius: 14px;
+      font-size: 14px; font-weight: 600;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 18px rgba(22,101,52,0.3);
+    }
+    .store-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(22,101,52,0.4); }
+    .store-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .store-btn-sub  { font-size: 10px; font-weight: 400; opacity: 0.8; display: block; }
+    .store-btn-name { font-size: 15px; font-weight: 800; display: block; line-height: 1.2; }
+
+    /* ── SECTIONS ── */
+    .fa-section { padding: 64px 24px; }
+    .fa-inner   { max-width: 1040px; margin: 0 auto; }
+    .fa-label   {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--green); margin-bottom: 8px;
+    }
+    .fa-title {
+      font-size: clamp(24px, 3.5vw, 34px);
+      font-weight: 900; color: var(--green-dark);
+      margin-bottom: 12px; line-height: 1.2;
+    }
+    .fa-sub {
+      font-size: 16px; color: var(--subtext);
+      max-width: 520px; margin-bottom: 44px; line-height: 1.7;
+    }
+
+    /* ── FEATURES ── */
+    .fa-features { background: var(--green-light); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+    .feature-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 26px;
+      border: 1px solid var(--green-pale);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .feature-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(34,197,94,0.14); }
+    .feature-icon { font-size: 34px; margin-bottom: 12px; display: block; }
+    .feature-card h3 { font-size: 16px; font-weight: 800; color: var(--green-dark); margin-bottom: 7px; }
+    .feature-card p  { font-size: 13px; color: var(--subtext); line-height: 1.65; }
+
+    /* ── STEPS ── */
+    .steps { display: flex; flex-direction: column; }
+    .step  {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 22px 0; border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 38px; height: 38px; flex-shrink: 0;
+      border-radius: 50%; background: var(--green); color: #fff;
+      font-size: 15px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 10px rgba(34,197,94,0.35);
+    }
+    .step h3 { font-size: 16px; font-weight: 800; color: var(--green-dark); margin-bottom: 5px; }
+    .step p  { font-size: 14px; color: var(--subtext); line-height: 1.65; }
+
+    /* ── PRIVACY STRIP ── */
+    .privacy-strip {
+      background: var(--green-dark); color: #fff;
+      padding: 52px 24px; text-align: center;
+    }
+    .privacy-strip h2 { font-size: 24px; font-weight: 900; margin-bottom: 10px; }
+    .privacy-strip p  { font-size: 15px; opacity: 0.8; max-width: 500px; margin: 0 auto 22px; }
+    .privacy-pills {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      justify-content: center; margin-bottom: 26px;
+    }
+    .privacy-pill {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 24px; padding: 7px 16px;
+      font-size: 13px; font-weight: 600;
+    }
+    .privacy-policy-btn {
+      display: inline-block;
+      background: var(--green); color: #fff;
+      padding: 10px 24px; border-radius: 24px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; border: none;
+      transition: opacity .2s;
+    }
+    .privacy-policy-btn:hover { opacity: 0.85; }
+
+    /* ── FOOTER ── */
+    .fa-footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px; text-align: center;
+      font-size: 13px; color: var(--subtext);
+    }
+    .fa-footer a { color: var(--green-mid); font-weight: 600; }
+    .fa-footer a:hover { text-decoration: underline; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
+
+    /* ── MODAL ── */
+    .fa-modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.55);
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .fa-modal-overlay.open { display: flex; }
+    .fa-modal {
+      background: #fff; border-radius: 20px;
+      max-width: 700px; width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+      position: relative;
+    }
+    .fa-modal-header {
+      position: sticky; top: 0;
+      background: var(--green-dark); color: #fff;
+      padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-radius: 20px 20px 0 0;
+    }
+    .fa-modal-header h2 { font-size: 18px; font-weight: 800; }
+    .fa-modal-close {
+      background: rgba(255,255,255,0.15); border: none;
+      color: #fff; width: 32px; height: 32px;
+      border-radius: 50%; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .fa-modal-close:hover { background: rgba(255,255,255,0.28); }
+    .fa-modal-body { padding: 28px 28px 32px; }
+    .fa-modal-body h3 {
+      font-size: 15px; font-weight: 800;
+      color: var(--green-dark); margin-top: 24px; margin-bottom: 6px;
+    }
+    .fa-modal-body h3:first-child { margin-top: 0; }
+    .fa-modal-body p  { font-size: 14px; color: #374151; margin-bottom: 10px; line-height: 1.7; }
+    .fa-modal-body ul { padding-left: 18px; margin-bottom: 10px; }
+    .fa-modal-body li { font-size: 14px; color: #374151; margin-bottom: 5px; line-height: 1.6; }
+    .pp-summary {
+      background: var(--green-light); border: 1px solid #BBF7D0;
+      border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;
+    }
+    .pp-summary ul { list-style: none; padding: 0; }
+    .pp-summary li { display: flex; gap: 8px; font-size: 13px; color: #166534; margin-bottom: 6px; }
+    .pp-summary li::before { content: "✓"; font-weight: 900; color: var(--green); flex-shrink: 0; }
+    .pp-updated { font-size: 12px; color: var(--subtext); margin-bottom: 20px; }
+
+    @media (max-width: 600px) {
+      .fa-modal-body { padding: 20px 18px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="fa-hero">
+  <div class="app-icon-wrap">
+    <img
+      src="https://img1.wsimg.com/isteam/ip/5f340b3a-f99d-428a-884a-1f83ccd95ea3/Fresh%20Ahead-6a129af.png/:/rs=h:175,m"
+      alt="Fresh Ahead app icon"
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    />
+    <div class="app-icon-fallback" style="display:none;">🌱</div>
+  </div>
+
+  <h1>Stop wasting food.<br />Start Fresh Ahead.</h1>
+  <p>Track every item in your fridge, freezer, and pantry. Scan barcodes, get expiry alerts, and never throw away forgotten food again.</p>
+  <div class="store-btns">
+    <a class="store-btn" href="https://apps.apple.com/app/id6766026185" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      <div class="store-btn-text">
+        <span class="store-btn-sub">Download on the</span>
+        <span class="store-btn-name">App Store</span>
+      </div>
+    </a>
+    <a class="store-btn" href="https://play.google.com/store/apps/details?id=com.freshahead.app" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.3.17.64.24.99.2l12.6-7.28-2.62-2.62-10.97 9.7zm-1.7-20.4C1.18 3.7 1 4.14 1 4.64v14.72c0 .5.18.94.48 1.28l.07.07 8.25-8.25v-.19L1.48 3.29l-.0.07zm18.12 9.08L17.07 10l-2.73 2.73 2.73 2.73 2.56-1.47c.73-.42.73-1.11-.03-1.55zM4.17.24c-.35-.04-.7.03-1 .2l10.97 9.7 2.62-2.62L4.17.24z"/></svg>
+      <div class="store-btn-text">
+        <span class="store-btn-sub">Get it on</span>
+        <span class="store-btn-name">Google Play</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="fa-section fa-features">
+  <div class="fa-inner">
+    <div class="fa-label">Features</div>
+    <h2 class="fa-title">Everything your kitchen needs</h2>
+    <p class="fa-sub">Fresh Ahead is built around one goal — helping you use food before it goes to waste.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🔍</span>
+        <h3>Barcode Scanner</h3>
+        <p>Scan any product barcode to instantly add it with the correct name, category, and health score from food databases.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📷</span>
+        <h3>Expiry Date OCR</h3>
+        <p>Photograph the expiry date on any product and the app reads it for you using on-device text recognition — no typing needed.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⏰</span>
+        <h3>Smart Expiry Alerts</h3>
+        <p>Get notified before food expires, not after. Reminders adapt to each item's shelf life automatically.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🛒</span>
+        <h3>Shopping List</h3>
+        <p>Your shopping list updates automatically when items expire. Add manually, tick off as you shop.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">💚</span>
+        <h3>Health Scores</h3>
+        <p>Every scanned product gets a health score based on real nutritional data — Nutri-Score, NOVA group, and more.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🚨</span>
+        <h3>Food Recall Alerts</h3>
+        <p>Checks FDA, USDA, and UK FSA recalls daily and alerts you if anything in your pantry is affected.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">👨‍👩‍👧</span>
+        <h3>Household Profiles</h3>
+        <p>Set up a household with member names so everyone knows who added what.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔒</span>
+        <h3>100% Private</h3>
+        <p>Everything is stored on your device. No account, no cloud, no tracking — ever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="fa-section">
+  <div class="fa-inner">
+    <div class="fa-label">How it works</div>
+    <h2 class="fa-title">Up and running in minutes</h2>
+    <p class="fa-sub">No account needed. Just open the app and start tracking.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Scan or add your items</h3>
+          <p>Use the barcode scanner or type the item name. Photograph the expiry date and the app reads it automatically.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Fresh Ahead tracks the dates</h3>
+          <p>Every item is stored with its expiry date, storage location, and health score — all in one place.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Get alerts before things expire</h3>
+          <p>Smart notifications remind you with enough time to actually use the food.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Shop smarter</h3>
+          <p>Your shopping list auto-updates when items expire or run low. Know exactly what you need before you shop.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY STRIP -->
+<div class="privacy-strip">
+  <h2>🔒 Your data stays on your device</h2>
+  <p>Fresh Ahead is built privacy-first. We do not collect, sell, or share your personal data.</p>
+  <div class="privacy-pills">
+    <span class="privacy-pill">✓ No account required</span>
+    <span class="privacy-pill">✓ No cloud sync</span>
+    <span class="privacy-pill">✓ No analytics</span>
+    <span class="privacy-pill">✓ No ads</span>
+    <span class="privacy-pill">✓ No third-party tracking</span>
+    <span class="privacy-pill">✓ Offline first</span>
+  </div>
+  <button class="privacy-policy-btn" onclick="document.getElementById('faPrivacyModal').classList.add('open')">
+    Read our Privacy Policy
+  </button>
+</div>
+
+<!-- FOOTER -->
+<div class="fa-footer">
+  <div class="footer-links">
+    <a href="#" onclick="document.getElementById('faPrivacyModal').classList.add('open'); return false;">Privacy Policy</a>
+    <a href="mailto:contact_us@yoganjaliconsultancy.co.uk">Support</a>
+  </div>
+  <p>© 2026 Yoganjali Consultancy Services Ltd. All rights reserved.</p>
+  <p style="margin-top:5px;">Fresh Ahead — Track it. Use it. Waste less.</p>
+</div>
+
+<!-- PRIVACY POLICY MODAL -->
+<div class="fa-modal-overlay" id="faPrivacyModal" onclick="if(event.target===this) this.classList.remove('open')">
+  <div class="fa-modal">
+    <div class="fa-modal-header">
+      <h2>🔒 Privacy Policy</h2>
+      <button class="fa-modal-close" onclick="document.getElementById('faPrivacyModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="fa-modal-body">
+      <p class="pp-updated">Last updated: 5 May 2026 &nbsp;·&nbsp; Fresh Ahead by Yoganjali Consultancy Services Ltd</p>
+
+      <div class="pp-summary">
+        <ul>
+          <li>We do not collect, transmit, or sell any personal data</li>
+          <li>All your data stays on your device — always</li>
+          <li>No account or sign-up required</li>
+          <li>No analytics, no tracking, no ads</li>
+          <li>Barcode scans send only the barcode number to food databases</li>
+          <li>Recall data is fetched from public government APIs and matched locally</li>
+        </ul>
+      </div>
+
+      <h3>1. Who we are</h3>
+      <p>Fresh Ahead is developed by Yoganjali Consultancy Services Ltd. For privacy questions contact: contact_us@yoganjaliconsultancy.co.uk</p>
+
+      <h3>2. Data stored on your device</h3>
+      <p>The App stores all data locally on your device only. We do not operate any servers that receive your data. This includes: pantry items, household profile, photos, shopping list, consumption history, and notification preferences.</p>
+
+      <h3>3. External network calls</h3>
+      <p><strong>Barcode lookups</strong> — when you scan a barcode, only the barcode number is sent to Open Food Facts (openfoodfacts.org) and USDA FoodData Central to retrieve product information. No personal data is transmitted.</p>
+      <p><strong>Food recall checks</strong> — the App fetches public recall lists from the US FDA, USDA FSIS, and UK Food Standards Agency. Your pantry contents are matched against these lists entirely on your device. Nothing from your pantry is ever sent externally.</p>
+
+      <h3>4. Permissions</h3>
+      <ul>
+        <li><strong>Camera</strong> — to scan barcodes and photograph expiry dates</li>
+        <li><strong>Photo Library</strong> — to select existing photos of expiry dates</li>
+        <li><strong>Notifications</strong> — to send local reminders before items expire (no push server involved)</li>
+      </ul>
+
+      <h3>5. On-device ML</h3>
+      <p>The App uses Google ML Kit for text recognition to read expiry dates from photos. All processing happens on your device — no photos are sent to external servers.</p>
+
+      <h3>6. Children's privacy</h3>
+      <p>The App is not directed at children under 13. We do not knowingly collect data from children.</p>
+
+      <h3>7. Your rights</h3>
+      <p>Since all data is stored locally on your device, you have full control at all times. You can delete individual items within the App or remove all data by uninstalling the App.</p>
+
+      <h3>8. Changes to this policy</h3>
+      <p>We may update this policy from time to time. Continued use of the App after changes constitutes acceptance of the updated policy.</p>
+
+      <h3>9. Contact</h3>
+      <p>Yoganjali Consultancy Services Ltd<br/>Email: contact_us@yoganjaliconsultancy.co.uk</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
