@@ -2,16 +2,22 @@
 
 Fresh Ahead helps you take control of your food, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, and pantry.
 
+**Available on iOS and Android.**
+- App Store: `https://apps.apple.com/app/id6766026185`
+- Google Play: `https://play.google.com/store/apps/details?id=com.freshahead.app`
+- Website: `https://yoganjaliconsultancy.co.uk`
+
 ---
 
 ## What you can do
 
 ### Track your food
-- **Add items manually** — enter the name, category, storage location, quantity, and expiry date in seconds.
+- **Add items manually** — enter the name, storage location, quantity, and expiry date in seconds.
 - **Scan a barcode** — the app looks up the product on Open Food Facts and pre-fills the details automatically, including the Nutri-Score and NOVA processing group.
 - **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item.
 - **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
-- **Product photos** — photos captured at scan time are stored permanently on your device and displayed on item cards throughout the app.
+- **Product image** — optionally take a photo of the product when adding it. The image is stored on your device and used as the item's icon throughout the app.
+- **Default storage location** — new items default to Pantry; change to Fridge or Freezer with one tap.
 
 ### Know what's expiring
 - **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance.
@@ -51,7 +57,8 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 ### Health & Nutrition
 - **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.
 - **NOVA group** — see the food processing level (1 = unprocessed, 4 = ultra-processed) for every scanned product.
-- **Product photos in health view** — scanned product images appear alongside each item in the Health tab.
+- **Health score grades** — the Health tab shows grade breakdowns (A–E) counted from pantry items only, giving an accurate picture of what you currently have in stock.
+- **Product images in health view** — product photos appear alongside each item in the Health tab.
 - **Consumption tracking** — mark items as "used" or "wasted" to build a picture of your household's food habits over time.
 
 ### Settings & customisation
@@ -75,9 +82,23 @@ No account required. No data is ever sent to any server we operate.
 
 ## Requirements
 
-- iOS 16 or later (iPhone / iPad)
+- **iOS** — iOS 16 or later (iPhone / iPad)
+- **Android** — Android 10 (API 29) or later
 - Barcode scanning and expiry-date OCR require a device camera
 - Push notifications must be enabled for expiry and recall alerts
+
+---
+
+## App details
+
+| Field | Value |
+|---|---|
+| App name | Fresh Ahead |
+| iOS bundle ID | `com.freshahead.app` |
+| Android package | `com.freshahead.app` |
+| App Store ID | 6766026185 |
+| Developer | Yoganjali Consultancy Services Ltd |
+| Contact | contact_us@yoganjaliconsultancy.co.uk |
 
 ---
 
@@ -89,3 +110,25 @@ npx expo start
 ```
 
 Barcode scanning and on-device OCR (`@react-native-ml-kit/text-recognition`) require a [development build](https://docs.expo.dev/develop/development-builds/introduction/) via EAS — they are not available in Expo Go.
+
+### Building with EAS
+
+```bash
+# Install EAS CLI
+npm install -g eas-cli
+eas login
+
+# iOS production build
+npx eas-cli@latest build -p ios --profile production
+
+# Android production build
+npx eas-cli@latest build -p android --profile production
+
+# Submit to App Store
+npx eas-cli@latest submit -p ios --profile production
+
+# Submit to Google Play
+npx eas-cli@latest submit -p android --profile production
+```
+
+EAS is configured with `appVersionSource: "remote"` — build numbers are managed automatically by Expo, not in `app.json`.

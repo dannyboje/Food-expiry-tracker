@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
 import { DatePickerField } from './date-picker-field';
@@ -96,7 +96,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const item: FoodItem = {
         id: itemId,
         name: name.trim(),
-        category: base?.category ?? 'other',
+        category: base?.category || 'other',
         storageLocation: location,
         quantity,
         quantityUnit: unit,
