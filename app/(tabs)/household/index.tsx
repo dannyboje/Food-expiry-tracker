@@ -25,6 +25,7 @@ import {
   removeMember,
   updateProfile,
 } from '@/utils/household-storage';
+import { persistPhoto, resolvePhotoUri } from '@/utils/photo-storage';
 import {
   type AlertThresholds,
   DEFAULT_THRESHOLDS,
@@ -238,7 +239,8 @@ export default function HouseholdScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0] && profile) {
-      const updated = await updateProfile(profile, { imageUri: result.assets[0].uri });
+      const permanentUri = await persistPhoto(result.assets[0].uri, 'profile');
+      const updated = await updateProfile(profile, { imageUri: permanentUri });
       setProfile(updated);
     }
   }
@@ -362,8 +364,8 @@ export default function HouseholdScreen() {
           <View style={styles.dashHeader}>
             {/* Profile avatar — tap to change */}
             <TouchableOpacity onPress={handlePickProfileImage} style={styles.avatarContainer} activeOpacity={0.8}>
-              {p.imageUri ? (
-                <Image source={{ uri: p.imageUri }} style={styles.avatarImage} />
+              {resolvePhotoUri(p.imageUri) ? (
+                <Image source={{ uri: resolvePhotoUri(p.imageUri) }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarEmoji}>
                   <Text style={styles.avatarEmojiText}>{p.userEmoji}</Text>
