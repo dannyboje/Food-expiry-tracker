@@ -4,9 +4,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { StorageLocation } from '@/types/food-item';
 
 const OPTIONS: { value: StorageLocation; label: string; emoji: string }[] = [
+  { value: 'pantry', label: 'Pantry', emoji: '🫙' },
   { value: 'fridge', label: 'Fridge', emoji: '🧊' },
   { value: 'freezer', label: 'Freezer', emoji: '❄️' },
-  { value: 'pantry', label: 'Pantry', emoji: '🫙' },
 ];
 
 interface Props {

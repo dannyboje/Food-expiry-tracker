@@ -13,7 +13,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
-import { CategoryPicker } from './category-picker';
 import { DatePickerField } from './date-picker-field';
 import { QuantityField } from './quantity-field';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -26,7 +25,7 @@ import { consumeCameraResult } from '@/utils/camera-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
-import type { FoodCategory, FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
+import type { FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
 
 interface Props {
   initialItem?: FoodItem;
@@ -56,8 +55,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const base = initialItem ?? prefill;
 
   const [name, setName] = useState(base?.name ?? '');
-  const [category, setCategory] = useState<FoodCategory>(base?.category ?? 'other');
-  const [location, setLocation] = useState<StorageLocation>(base?.storageLocation ?? 'fridge');
+  const [location, setLocation] = useState<StorageLocation>(base?.storageLocation ?? 'pantry');
   const [quantity, setQuantity] = useState(base?.quantity ?? 1);
   const [unit, setUnit] = useState<QuantityUnit>(base?.quantityUnit ?? 'pcs');
   const [purchaseDate, setPurchaseDate] = useState(base?.purchaseDate ?? todayISO());
@@ -98,7 +96,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const item: FoodItem = {
         id: itemId,
         name: name.trim(),
-        category,
+        category: base?.category ?? 'other',
         storageLocation: location,
         quantity,
         quantityUnit: unit,
@@ -199,8 +197,21 @@ export function AddEditForm({ initialItem, prefill }: Props) {
             </View>
           </FormRow>
 
-          <FormRow label="Category">
-            <CategoryPicker value={category} onChange={setCategory} />
+          <FormRow label="Product image (optional)">
+            <Text style={[styles.photoHint, { color: colors.subtext }]}>
+              Used as the product icon in your pantry
+            </Text>
+            <TouchableOpacity
+              style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={openNutritionCamera}>
+              <IconSymbol name="camera.fill" size={18} color={Brand.green} />
+              <Text style={[styles.photoBtnLabel, { color: colors.subtext }]}>
+                {nutritionPhotoUri ? 'Retake photo' : 'Take photo'}
+              </Text>
+            </TouchableOpacity>
+            {resolvePhotoUri(nutritionPhotoUri) && (
+              <Image source={{ uri: resolvePhotoUri(nutritionPhotoUri) }} style={styles.photoThumb} />
+            )}
           </FormRow>
 
           <FormRow label="Storage location">
@@ -226,20 +237,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
               <Text style={[styles.expiryHint, { color: Brand.green }]}>
                 💡 {prefill.expiryHint}
               </Text>
-            )}
-          </FormRow>
-
-          <FormRow label="Nutrition label (optional)">
-            <TouchableOpacity
-              style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-              onPress={openNutritionCamera}>
-              <IconSymbol name="camera.fill" size={18} color={Brand.green} />
-              <Text style={[styles.photoBtnLabel, { color: colors.subtext }]}>
-                {nutritionPhotoUri ? 'Retake photo' : 'Take photo'}
-              </Text>
-            </TouchableOpacity>
-            {resolvePhotoUri(nutritionPhotoUri) && (
-              <Image source={{ uri: resolvePhotoUri(nutritionPhotoUri) }} style={styles.photoThumb} />
             )}
           </FormRow>
 
@@ -321,6 +318,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  photoHint: { fontSize: 12, marginTop: -4, marginBottom: 2 },
   photoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
