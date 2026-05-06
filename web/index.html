@@ -248,6 +248,48 @@
     .pp-summary li::before { content: "✓"; font-weight: 900; color: var(--green); flex-shrink: 0; }
     .pp-updated { font-size: 12px; color: var(--subtext); margin-bottom: 20px; }
 
+    /* ── VIDEO SECTION ── */
+    .fa-video { background: var(--green-light); }
+    .video-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 32px;
+    }
+    .video-phone-frame {
+      position: relative;
+      width: 280px; flex-shrink: 0;
+      background: #1c1c1e;
+      border-radius: 40px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 2px #3a3a3c,
+        0 32px 80px rgba(0,0,0,0.28),
+        inset 0 0 0 1px rgba(255,255,255,0.07);
+    }
+    .video-phone-frame::before {
+      content: "";
+      display: block;
+      width: 60px; height: 8px;
+      background: #3a3a3c;
+      border-radius: 4px;
+      margin: 0 auto 10px;
+    }
+    .video-phone-frame iframe {
+      width: 100%;
+      aspect-ratio: 9/16;
+      border-radius: 24px;
+      border: none;
+      display: block;
+    }
+    .video-caption {
+      max-width: 420px; text-align: center;
+    }
+    .video-caption h3 { font-size: 22px; font-weight: 900; color: var(--green-dark); margin-bottom: 10px; }
+    .video-caption p  { font-size: 15px; color: var(--subtext); line-height: 1.7; }
+    @media (min-width: 720px) {
+      .video-wrap { flex-direction: row; justify-content: center; align-items: center; gap: 60px; }
+      .video-caption { text-align: left; }
+    }
+
     @media (max-width: 600px) {
       .fa-modal-body { padding: 20px 18px 24px; }
     }
@@ -371,6 +413,29 @@
           <h3>Shop smarter</h3>
           <p>Your shopping list auto-updates when items expire or run low. Know exactly what you need before you shop.</p>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VIDEO -->
+<section class="fa-section fa-video">
+  <div class="fa-inner">
+    <div class="fa-label">See it in action</div>
+    <h2 class="fa-title">Watch how it works</h2>
+    <p class="fa-sub" style="margin-bottom:40px;">A quick walkthrough of Fresh Ahead in action — from scanning a barcode to getting an expiry alert.</p>
+    <div class="video-wrap">
+      <div class="video-phone-frame">
+        <iframe
+          src="https://www.youtube.com/embed/fEGjIPx-MJU"
+          title="Fresh Ahead app demo"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+      <div class="video-caption">
+        <h3>Track food.<br/>Cut waste.<br/>Live fresher.</h3>
+        <p>See how easy it is to scan products, set expiry alerts, and keep your whole household in sync — all without creating an account or sharing any data.</p>
       </div>
     </div>
   </div>
