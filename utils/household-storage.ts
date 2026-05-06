@@ -107,3 +107,14 @@ export async function regenerateCode(profile: HouseholdProfile): Promise<Househo
   await saveHousehold(updated);
   return updated;
 }
+
+export async function updateMemberEmoji(profile: HouseholdProfile, memberId: string, emoji: string): Promise<HouseholdProfile> {
+  const member = profile.members.find((m) => m.id === memberId);
+  const updated: HouseholdProfile = {
+    ...profile,
+    userEmoji: member?.role === 'owner' ? emoji : profile.userEmoji,
+    members: profile.members.map((m) => m.id === memberId ? { ...m, emoji } : m),
+  };
+  await saveHousehold(updated);
+  return updated;
+}

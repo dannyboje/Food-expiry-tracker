@@ -23,6 +23,7 @@ import {
   loadHousehold,
   regenerateCode,
   removeMember,
+  updateMemberEmoji,
   updateProfile,
 } from '@/utils/household-storage';
 import { persistPhoto, resolvePhotoUri } from '@/utils/photo-storage';
@@ -35,6 +36,13 @@ import {
 } from '@/utils/notification-scheduler';
 
 const NOTIF_PREF_KEY = '@notifications_enabled';
+
+const EMOJI_OPTIONS = [
+  '👤', '👦', '👧', '👨', '👩', '🧑', '👴', '👵', '🧒', '👶',
+  '🧔', '👱', '🧕', '🎅', '🤶', '🧙', '🦸', '🦹', '😀', '😎',
+  '🤓', '😏', '🤗', '😄', '😸', '🐱', '🐶', '🦊', '🐻', '🐼',
+  '🦁', '🐯', '🐨', '🐸', '🦄', '🐲', '🐙', '🦋', '🌟', '🍀',
+];
 
 const TIERS: { key: keyof AlertThresholds; shelf: string; min: number; max: number }[] = [
   { key: 'tier1', shelf: 'Under 5 days shelf life', min: 1, max: 4 },
@@ -93,6 +101,9 @@ export default function HouseholdScreen() {
   // Add member
   const [newMemberName, setNewMemberName] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
+
+  // Emoji picker
+  const [pickingEmojiForMemberId, setPickingEmojiForMemberId] = useState<string | null>(null);
 
   // Edit profile
   const [editingName, setEditingName] = useState(false);
@@ -182,6 +193,13 @@ export default function HouseholdScreen() {
     setProfile(updated);
     setNewMemberName('');
     setShowAddMember(false);
+  }
+
+  async function handlePickEmoji(memberId: string, emoji: string) {
+    if (!profile) return;
+    const updated = await updateMemberEmoji(profile, memberId, emoji);
+    setProfile(updated);
+    setPickingEmojiForMemberId(null);
   }
 
   async function handleRemoveMember(memberId: string, memberName: string) {
@@ -439,31 +457,53 @@ export default function HouseholdScreen() {
             </TouchableOpacity>
           </View>
 
-          {p.members.map((member, i) => (
-            <View
-              key={member.id}
-              style={[
-                styles.memberRow,
-                i < p.members.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-              ]}>
-              <View style={styles.memberAvatar}>
-                <Text style={styles.memberEmoji}>{member.emoji}</Text>
+          {p.members.map((member, i) => {
+            const isPickingThis = pickingEmojiForMemberId === member.id;
+            return (
+              <View key={member.id}>
+                <View style={styles.memberRow}>
+                  <TouchableOpacity
+                    style={[styles.memberAvatar, isPickingThis && styles.memberAvatarActive]}
+                    onPress={() => setPickingEmojiForMemberId(isPickingThis ? null : member.id)}
+                    activeOpacity={0.7}
+                    hitSlop={4}>
+                    <Text style={styles.memberEmoji}>{member.emoji}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.memberInfo}>
+                    <Text style={[styles.memberName, { color: colors.text }]}>{member.name}</Text>
+                    <Text style={[styles.memberRole, { color: colors.subtext }]}>
+                      {member.role === 'owner' ? '👑 Owner' : '✓ Member'}
+                    </Text>
+                  </View>
+                  {member.role !== 'owner' && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveMember(member.id, member.name)}
+                      style={styles.removeMemberBtn}>
+                      <IconSymbol name="xmark" size={14} color={colors.subtext} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {isPickingThis && (
+                  <View style={[styles.emojiGrid, { borderTopColor: colors.border }]}>
+                    {EMOJI_OPTIONS.map((e) => (
+                      <TouchableOpacity
+                        key={e}
+                        style={[styles.emojiOption, member.emoji === e && styles.emojiOptionSelected]}
+                        onPress={() => handlePickEmoji(member.id, e)}
+                        activeOpacity={0.6}>
+                        <Text style={styles.emojiOptionText}>{e}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {i < p.members.length - 1 && (
+                  <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
+                )}
               </View>
-              <View style={styles.memberInfo}>
-                <Text style={[styles.memberName, { color: colors.text }]}>{member.name}</Text>
-                <Text style={[styles.memberRole, { color: colors.subtext }]}>
-                  {member.role === 'owner' ? '👑 Owner' : '✓ Member'}
-                </Text>
-              </View>
-              {member.role !== 'owner' && (
-                <TouchableOpacity
-                  onPress={() => handleRemoveMember(member.id, member.name)}
-                  style={styles.removeMemberBtn}>
-                  <IconSymbol name="xmark" size={14} color={colors.subtext} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+            );
+          })}
 
           {showAddMember && (
             <View style={[styles.addMemberRow, { borderTopColor: colors.border }]}>
@@ -726,12 +766,27 @@ const styles = StyleSheet.create({
   memberAvatar: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Brand.greenLight, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'transparent',
+  },
+  memberAvatarActive: {
+    borderColor: Brand.green,
   },
   memberEmoji: { fontSize: 20 },
   memberInfo: { flex: 1 },
   memberName: { fontSize: 15, fontWeight: '600' },
   memberRole: { fontSize: 12, marginTop: 2 },
   removeMemberBtn: { padding: 8 },
+  emojiGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: 4, paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  emojiOption: {
+    width: 40, height: 40, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emojiOptionSelected: { backgroundColor: Brand.greenLight },
+  emojiOptionText: { fontSize: 22 },
 
   // Add member
   addMemberRow: {

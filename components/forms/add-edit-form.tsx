@@ -12,7 +12,6 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CategoryPicker } from './category-picker';
 import { LocationPicker } from './location-picker';
 import { DatePickerField } from './date-picker-field';
 import { QuantityField } from './quantity-field';
@@ -26,7 +25,7 @@ import { consumeCameraResult } from '@/utils/camera-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
-import type { FoodCategory, FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
+import type { FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
 
 interface Props {
   initialItem?: FoodItem;
@@ -56,7 +55,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const base = initialItem ?? prefill;
 
   const [name, setName] = useState(base?.name ?? '');
-  const [category, setCategory] = useState<FoodCategory>(base?.category ?? 'other');
   const [location, setLocation] = useState<StorageLocation>(base?.storageLocation ?? 'pantry');
   const [quantity, setQuantity] = useState(base?.quantity ?? 1);
   const [unit, setUnit] = useState<QuantityUnit>(base?.quantityUnit ?? 'pcs');
@@ -108,7 +106,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const item: FoodItem = {
         id: itemId,
         name: name.trim(),
-        category,
+        category: base?.category || 'other',
         storageLocation: location,
         quantity,
         quantityUnit: unit,
@@ -142,10 +140,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
     } finally {
       setSaving(false);
     }
-  }
-
-  function openExpiryCamera() {
-    router.push('/camera/expiry');
   }
 
   function openNutritionCamera() {
@@ -230,10 +224,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
             )}
           </FormRow>
 
-          <FormRow label="Category">
-            <CategoryPicker value={category} onChange={setCategory} />
-          </FormRow>
-
           <FormRow label="Storage location">
             <LocationPicker value={location} onChange={setLocation} />
           </FormRow>
@@ -253,14 +243,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
 
           <FormRow label="Expiry / best before">
             <DatePickerField label="" value={expiryDate} onChange={setExpiryDate} />
-            <TouchableOpacity
-              style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-              onPress={openExpiryCamera}>
-              <IconSymbol name="camera.fill" size={18} color={Brand.green} />
-              <Text style={[styles.photoBtnLabel, { color: colors.subtext }]}>
-                {expiryPhotoUri ? 'Retake expiry photo' : 'Scan expiry date with camera'}
-              </Text>
-            </TouchableOpacity>
             {resolvePhotoUri(expiryPhotoUri) && (
               <Image source={{ uri: resolvePhotoUri(expiryPhotoUri) }} style={styles.photoThumb} />
             )}
