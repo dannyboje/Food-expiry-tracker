@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AddEditForm } from '@/components/forms/add-edit-form';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import type { FoodCategory, FoodItem } from '@/types/food-item';
 import { usePantry } from '@/hooks/use-pantry';
 
@@ -44,6 +45,7 @@ export default function AddItemScreen() {
   }, [state.isLoading, enrichedItems]);
 
   if (params.editId) {
+    if (state.isLoading) return <LoadingScreen />;
     const item = enrichedItems.find((i) => i.id === params.editId);
     if (item) return <AddEditForm initialItem={item} />;
   }

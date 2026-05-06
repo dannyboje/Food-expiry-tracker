@@ -10,7 +10,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePantry } from '@/hooks/use-pantry';
-import { enrichItem } from '@/utils/food-item-utils';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
 
@@ -32,8 +31,7 @@ export default function ItemDetailScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { enrichedItems, deleteItem } = usePantry();
 
-  const rawItem = enrichedItems.find((i) => i.id === id) ?? null;
-  const item = rawItem ? enrichItem(rawItem) : null;
+  const item = enrichedItems.find((i) => i.id === id) ?? null;
 
   useLayoutEffect(() => {
     if (!item) return;

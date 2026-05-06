@@ -29,7 +29,8 @@ type PantryAction =
   | { type: 'SET_FILTER'; payload: StorageLocation | 'all' }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_RECALL_ALERTS'; payload: RecallMatch[] };
+  | { type: 'SET_RECALL_ALERTS'; payload: RecallMatch[] }
+  | { type: 'DISMISS_RECALL_ALERT'; payload: string };
 
 function reducer(state: PantryState, action: PantryAction): PantryState {
   switch (action.type) {
@@ -54,6 +55,8 @@ function reducer(state: PantryState, action: PantryAction): PantryState {
       return { ...state, error: action.payload };
     case 'SET_RECALL_ALERTS':
       return { ...state, recallAlerts: action.payload };
+    case 'DISMISS_RECALL_ALERT':
+      return { ...state, recallAlerts: state.recallAlerts.filter((a) => a.pairId !== action.payload) };
     default:
       return state;
   }
@@ -165,13 +168,13 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     // Immediately check the new item against cached recalls (no network call needed).
     runMatchOnCachedRecalls(newList)
       .then((alerts) => {
-        if (alerts.length > 0) {
-          dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
-          fireRecallNotification(alerts.length).catch(() => {});
-        }
+        const existingIds = new Set(state.recallAlerts.map((a) => a.pairId));
+        const newAlerts = alerts.filter((a) => !existingIds.has(a.pairId));
+        if (alerts.length > 0) dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
+        if (newAlerts.length > 0) fireRecallNotification(newAlerts.length).catch(() => {});
       })
       .catch(() => {});
-  }, [state.items]);
+  }, [state.items, state.recallAlerts]);
 
   const updateItem = useCallback(async (item: FoodItem) => {
     const ids = await scheduleItemNotification(item);
@@ -183,13 +186,13 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     // Re-check immediately in case the item name was changed to match a recall.
     runMatchOnCachedRecalls(newList)
       .then((alerts) => {
-        if (alerts.length > 0) {
-          dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
-          fireRecallNotification(alerts.length).catch(() => {});
-        }
+        const existingIds = new Set(state.recallAlerts.map((a) => a.pairId));
+        const newAlerts = alerts.filter((a) => !existingIds.has(a.pairId));
+        if (alerts.length > 0) dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
+        if (newAlerts.length > 0) fireRecallNotification(newAlerts.length).catch(() => {});
       })
       .catch(() => {});
-  }, [state.items]);
+  }, [state.items, state.recallAlerts]);
 
   const deleteItem = useCallback(async (id: string) => {
     const item = state.items.find((i) => i.id === id);
@@ -217,9 +220,9 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   const setFilter = useCallback((f: StorageLocation | 'all') => dispatch({ type: 'SET_FILTER', payload: f }), []);
 
   const dismissRecallAlert = useCallback(async (pairId: string) => {
-    dispatch({ type: 'SET_RECALL_ALERTS', payload: state.recallAlerts.filter((a) => a.pairId !== pairId) });
+    dispatch({ type: 'DISMISS_RECALL_ALERT', payload: pairId });
     await dismissAlert(pairId);
-  }, [state.recallAlerts]);
+  }, []);
 
   return (
     <PantryContext.Provider value={{

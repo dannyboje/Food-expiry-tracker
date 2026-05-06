@@ -5,11 +5,16 @@ export function daysBetween(dateA: string, dateB: string): number {
   const b = new Date(dateB);
   a.setHours(0, 0, 0, 0);
   b.setHours(0, 0, 0, 0);
-  return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
 export function daysUntilExpiry(expiryDate: string): number {
@@ -26,7 +31,7 @@ export function shelfLifeDays(purchaseDate: string, expiryDate: string): number 
 
 export function getExpiryStatus(daysLeft: number): ExpiryStatus {
   if (daysLeft < 0) return 'expired';
-  if (daysLeft <= 3) return 'expiring_soon';
+  if (daysLeft <= 7) return 'expiring_soon';
   return 'fresh';
 }
 
