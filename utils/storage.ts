@@ -126,6 +126,29 @@ export async function deleteItem(id: string): Promise<void> {
   await database.runAsync('DELETE FROM food_items WHERE id = ?', [id]);
 }
 
+export async function deleteAllItems(): Promise<FoodItem[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>('SELECT * FROM food_items');
+  const items = rows.map(rowToItem);
+  if (items.length > 0) {
+    await database.runAsync('DELETE FROM food_items');
+  }
+  return items;
+}
+
+export async function deleteItemsCreatedAfter(since: string): Promise<FoodItem[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    'SELECT * FROM food_items WHERE created_at >= ?',
+    [since]
+  );
+  const items = rows.map(rowToItem);
+  if (items.length > 0) {
+    await database.runAsync('DELETE FROM food_items WHERE created_at >= ?', [since]);
+  }
+  return items;
+}
+
 // Returns items that were deleted so callers can cancel their notifications.
 export async function cleanupExpiredItems(daysPastExpiry: number): Promise<FoodItem[]> {
   const database = await getDb();

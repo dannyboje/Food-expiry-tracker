@@ -49,10 +49,10 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 - **Reset** — tap "Reset tracker" at the bottom of the stats card to clear all history. A confirmation step prevents accidental resets.
 
 ### Household
-- **Multiple members** — add everyone in your household and see who added each pantry item.
-- **Shared pantry** — all household members appear on item cards so there's no confusion about ownership.
+- **Multiple members** — add everyone in your household so each pantry item shows who added it.
 - **Profile photo** — tap your avatar to set a photo from your library.
-- **Household code** — share a six-character code so family members can link their devices.
+- **Custom emoji** — each member can pick their own avatar emoji.
+- **Coming soon: shared household** — real-time pantry sharing across multiple devices is on the roadmap. For now, all data lives on your device, so household members are tracked locally for attribution purposes.
 
 ### Health & Nutrition
 - **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.

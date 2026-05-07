@@ -80,6 +80,13 @@ export default function ShoppingScreen() {
     ]);
   }
 
+  function clearAll() {
+    Alert.alert('Clear shopping list?', 'This will remove all items.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear all', style: 'destructive', onPress: () => persist([]) },
+    ]);
+  }
+
   const pantryCount = items.filter((i) => i.fromPantry && !i.checked).length;
 
   return (
@@ -101,11 +108,18 @@ export default function ShoppingScreen() {
                 </Text>
               )}
             </View>
-            {items.some((i) => i.checked) && (
-              <TouchableOpacity onPress={clearChecked}>
-                <Text style={styles.clearBtn}>Clear checked</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.headerActions}>
+              {items.some((i) => i.checked) && (
+                <TouchableOpacity onPress={clearChecked}>
+                  <Text style={styles.clearBtn}>Clear checked</Text>
+                </TouchableOpacity>
+              )}
+              {items.length > 0 && (
+                <TouchableOpacity onPress={clearAll}>
+                  <Text style={styles.clearBtn}>Clear all</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           <View style={styles.inputRow}>
             <TextInput
@@ -227,7 +241,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-  clearBtn: { color: 'rgba(22, 101, 52, 0.85)', fontSize: 14, fontWeight: '600', marginTop: 8 },
+  headerActions: { alignItems: 'flex-end', gap: 4 },
+  clearBtn: { color: 'rgba(22, 101, 52, 0.85)', fontSize: 14, fontWeight: '600' },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

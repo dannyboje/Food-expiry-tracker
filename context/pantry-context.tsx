@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useReducer, u
 import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { FoodItem, StorageLocation } from '@/types/food-item';
-import { getAllItems, insertItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem, cleanupExpiredItems } from '@/utils/storage';
+import { getAllItems, insertItem, updateItem as dbUpdateItem, deleteItem as dbDeleteItem, cleanupExpiredItems, deleteAllItems, deleteItemsCreatedAfter } from '@/utils/storage';
 import { scheduleItemNotification, cancelItemNotifications } from '@/utils/notification-scheduler';
 import { recordConsumption, type ConsumptionType } from '@/utils/consumption-store';
 import { enrichItem } from '@/utils/food-item-utils';
@@ -71,6 +71,8 @@ interface PantryContextValue {
   setSearch: (q: string) => void;
   setFilter: (f: StorageLocation | 'all') => void;
   dismissRecallAlert: (pairId: string) => Promise<void>;
+  clearAllPantryItems: () => Promise<void>;
+  clearRecentPantryItems: () => Promise<void>;
 }
 
 const PantryContext = createContext<PantryContextValue | null>(null);
@@ -224,10 +226,32 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     await dismissAlert(pairId);
   }, []);
 
+  const clearAllPantryItems = useCallback(async () => {
+    const deleted = await deleteAllItems();
+    for (const item of deleted) {
+      cancelItemNotifications(item.notificationIds).catch(() => {});
+    }
+    dispatch({ type: 'LOAD_ITEMS', payload: [] });
+    syncAll([]).catch(() => {});
+  }, []);
+
+  const clearRecentPantryItems = useCallback(async () => {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const deleted = await deleteItemsCreatedAfter(since);
+    const deletedIds = new Set(deleted.map((i) => i.id));
+    for (const item of deleted) {
+      cancelItemNotifications(item.notificationIds).catch(() => {});
+    }
+    const remaining = state.items.filter((i) => !deletedIds.has(i.id));
+    dispatch({ type: 'LOAD_ITEMS', payload: remaining });
+    syncAll(remaining).catch(() => {});
+  }, [state.items]);
+
   return (
     <PantryContext.Provider value={{
       state, addItem, updateItem, deleteItem, markAsUsed,
       setSearch, setFilter, dismissRecallAlert,
+      clearAllPantryItems, clearRecentPantryItems,
     }}>
       {children}
     </PantryContext.Provider>

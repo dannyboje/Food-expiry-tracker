@@ -1,5 +1,5 @@
 import {
-  Alert, Clipboard, Image, ScrollView, StyleSheet, Switch, Text,
+  Alert, Image, ScrollView, StyleSheet, Switch, Text,
   TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +21,6 @@ import {
   addMember,
   createHousehold,
   loadHousehold,
-  regenerateCode,
   removeMember,
   updateMemberEmoji,
   updateProfile,
@@ -94,10 +93,6 @@ export default function HouseholdScreen() {
   const [displayName, setDisplayName] = useState('');
   const [householdName, setHouseholdName] = useState('');
 
-  // Join by code
-  const [joinCode, setJoinCode] = useState('');
-  const [showJoin, setShowJoin] = useState(false);
-
   // Add member
   const [newMemberName, setNewMemberName] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
@@ -114,7 +109,7 @@ export default function HouseholdScreen() {
   const [thresholds, setThresholds] = useState<AlertThresholds>(DEFAULT_THRESHOLDS);
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
-  const { enrichedItems } = usePantry();
+  const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
 
   useEffect(() => {
     loadHousehold().then((p) => {
@@ -171,22 +166,6 @@ export default function HouseholdScreen() {
     setScreen('dashboard');
   }
 
-  async function handleJoinCode() {
-    const code = joinCode.trim().toUpperCase();
-    if (code.length !== 6) {
-      Alert.alert('Invalid code', 'Household codes are 6 characters long.');
-      return;
-    }
-    // In a local-only app, joining means updating the displayed code.
-    // Full sync requires a backend — this stores intent locally.
-    Alert.alert(
-      'Code Saved',
-      `Code "${code}" saved. Share this code with family members so they can add it on their devices.\n\nFull sync across devices will be available in a future update.`,
-      [{ text: 'OK', onPress: () => setShowJoin(false) }]
-    );
-    setJoinCode('');
-  }
-
   async function handleAddMember() {
     if (!newMemberName.trim() || !profile) return;
     const updated = await addMember(profile, newMemberName.trim());
@@ -220,23 +199,6 @@ export default function HouseholdScreen() {
     ]);
   }
 
-  async function handleRegenerateCode() {
-    if (!profile) return;
-    Alert.alert(
-      'Generate New Code?',
-      'The old code will stop working. Family members will need to use the new code.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Generate', onPress: async () => {
-            const updated = await regenerateCode(profile);
-            setProfile(updated);
-          },
-        },
-      ]
-    );
-  }
-
   async function handleSaveHouseholdName() {
     if (!profile || !editedName.trim()) return;
     const updated = await updateProfile(profile, { householdName: editedName.trim() });
@@ -263,6 +225,28 @@ export default function HouseholdScreen() {
     }
   }
 
+  function handleClearRecent() {
+    Alert.alert(
+      'Clear recent items?',
+      'This will permanently remove all pantry items added in the last 24 hours.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => clearRecentPantryItems().catch(() => {}) },
+      ],
+    );
+  }
+
+  function handleClearAll() {
+    Alert.alert(
+      'Clear entire pantry?',
+      'This will permanently delete ALL items from your pantry. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear everything', style: 'destructive', onPress: () => clearAllPantryItems().catch(() => {}) },
+      ],
+    );
+  }
+
   function handleResetStats() {
     Alert.alert(
       'Reset Food Waste Tracker?',
@@ -279,12 +263,6 @@ export default function HouseholdScreen() {
         },
       ],
     );
-  }
-
-  function copyCode() {
-    if (!profile) return;
-    Clipboard.setString(profile.householdCode);
-    Alert.alert('Copied!', `Household code "${profile.householdCode}" copied to clipboard.`);
   }
 
   if (screen === 'loading') {
@@ -331,34 +309,6 @@ export default function HouseholdScreen() {
             <TouchableOpacity style={styles.createBtn} onPress={handleCreate}>
               <Text style={styles.createBtnText}>Create Household</Text>
             </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={[styles.divider, { borderColor: colors.border }]}>
-              <Text style={[styles.dividerText, { color: colors.subtext }]}>or join with a code</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.joinCodeBtn, { borderColor: Brand.green }]}
-              onPress={() => setShowJoin(true)}>
-              <Text style={[styles.joinCodeBtnText, { color: Brand.green }]}>Enter Household Code</Text>
-            </TouchableOpacity>
-
-            {showJoin && (
-              <View style={styles.joinRow}>
-                <TextInput
-                  style={[styles.joinInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-                  value={joinCode}
-                  onChangeText={(t) => setJoinCode(t.toUpperCase())}
-                  placeholder="ABC123"
-                  placeholderTextColor={colors.subtext}
-                  maxLength={6}
-                  autoCapitalize="characters"
-                />
-                <TouchableOpacity style={styles.joinSubmitBtn} onPress={handleJoinCode}>
-                  <Text style={styles.joinSubmitText}>Join</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         </ScrollView>
       </View>
@@ -429,24 +379,6 @@ export default function HouseholdScreen() {
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.dashContent} showsVerticalScrollIndicator={false}>
-
-        {/* Household Code card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.subtext }]}>HOUSEHOLD CODE</Text>
-          <View style={styles.codeRow}>
-            <Text style={[styles.codeText, { color: colors.text }]}>{p.householdCode}</Text>
-            <TouchableOpacity onPress={copyCode} style={styles.copyBtn}>
-              <IconSymbol name="doc.on.doc" size={18} color={Brand.green} />
-              <Text style={[styles.copyBtnText, { color: Brand.green }]}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.codeHint, { color: colors.subtext }]}>
-            Share this code with family members. They enter it on their device to join your household.
-          </Text>
-          <TouchableOpacity onPress={handleRegenerateCode} style={styles.regenBtn}>
-            <Text style={[styles.regenBtnText, { color: colors.subtext }]}>Generate new code</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Members card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -522,27 +454,12 @@ export default function HouseholdScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </View>
 
-        {/* Join another household */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.subtext }]}>JOIN ANOTHER HOUSEHOLD</Text>
-          <Text style={[styles.codeHint, { color: colors.subtext }]}>
-            Have a household code from a family member? Enter it here to use their pantry list.
-          </Text>
-          <View style={[styles.joinRow, { marginTop: 10 }]}>
-            <TextInput
-              style={[styles.joinInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              value={joinCode}
-              onChangeText={(t) => setJoinCode(t.toUpperCase())}
-              placeholder="ABC123"
-              placeholderTextColor={colors.subtext}
-              maxLength={6}
-              autoCapitalize="characters"
-            />
-            <TouchableOpacity style={styles.joinSubmitBtn} onPress={handleJoinCode}>
-              <Text style={styles.joinSubmitText}>Join</Text>
-            </TouchableOpacity>
+          <View style={[styles.comingSoonRow, { borderTopColor: colors.border }]}>
+            <Text style={styles.comingSoonIcon}>🔮</Text>
+            <Text style={[styles.comingSoonText, { color: colors.subtext }]}>
+              <Text style={{ fontWeight: '600' }}>Shared household access</Text> — real-time pantry sync across multiple devices is on the way.
+            </Text>
           </View>
         </View>
 
@@ -657,6 +574,31 @@ export default function HouseholdScreen() {
           ))}
         </View>
 
+        {/* ── Data Management ───────────────────────── */}
+        <Text style={[styles.settingsSub, { color: colors.subtext }]}>DATA MANAGEMENT</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.dangerRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+            onPress={handleClearRecent}
+            activeOpacity={0.7}>
+            <IconSymbol name="clock.arrow.trianglehead.counterclockwise.rotate.90" size={16} color="#F97316" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.dangerTitle, { color: colors.text }]}>Clear last 24 hours</Text>
+              <Text style={[styles.dangerSub, { color: colors.subtext }]}>Remove items added in the past 24 hours</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={handleClearAll}
+            activeOpacity={0.7}>
+            <IconSymbol name="trash" size={16} color="#EF4444" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.dangerTitle, { color: '#EF4444' }]}>Clear entire pantry</Text>
+              <Text style={[styles.dangerSub, { color: colors.subtext }]}>Delete all items and start fresh</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* About */}
         <Text style={[styles.settingsSub, { color: colors.subtext }]}>ABOUT</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -695,12 +637,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14, borderRadius: 14, alignItems: 'center',
   },
   createBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, marginVertical: 20, alignItems: 'center' },
-  dividerText: { fontSize: 13, marginTop: -9, backgroundColor: 'transparent', paddingHorizontal: 12 },
-  joinCodeBtn: {
-    paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, alignItems: 'center',
-  },
-  joinCodeBtnText: { fontWeight: '700', fontSize: 15 },
 
   // Dashboard gradient header
   dashGradient: { paddingBottom: 16 },
@@ -752,15 +688,6 @@ const styles = StyleSheet.create({
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   addMemberLink: { fontSize: 14, fontWeight: '600' },
 
-  // Code
-  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  codeText: { fontSize: 32, fontWeight: '900', letterSpacing: 6 },
-  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8 },
-  copyBtnText: { fontWeight: '600', fontSize: 14 },
-  codeHint: { fontSize: 13, lineHeight: 18 },
-  regenBtn: { marginTop: 8 },
-  regenBtnText: { fontSize: 12 },
-
   // Members
   memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   memberAvatar: {
@@ -796,15 +723,13 @@ const styles = StyleSheet.create({
   addMemberInput: { flex: 1, height: 40, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, fontSize: 15 },
   addMemberSubmit: { backgroundColor: Brand.green, paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center' },
   addMemberSubmitText: { color: '#fff', fontWeight: '700' },
-
-  // Join
-  joinRow: { flexDirection: 'row', gap: 8 },
-  joinInput: {
-    flex: 1, height: 44, borderRadius: 10, borderWidth: 1,
-    paddingHorizontal: 14, fontSize: 18, fontWeight: '700', letterSpacing: 4, textAlign: 'center',
+  comingSoonRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    marginTop: 12, paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  joinSubmitBtn: { backgroundColor: Brand.green, paddingHorizontal: 18, borderRadius: 10, justifyContent: 'center' },
-  joinSubmitText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  comingSoonIcon: { fontSize: 14, lineHeight: 18 },
+  comingSoonText: { flex: 1, fontSize: 12, lineHeight: 17 },
 
   // Settings section
   settingsHeading: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 8 },
@@ -833,4 +758,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end', marginTop: 12, padding: 6,
   },
   resetBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
+  dangerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 4, paddingVertical: 14,
+  },
+  dangerTitle: { fontSize: 15, fontWeight: '500' },
+  dangerSub: { fontSize: 12, marginTop: 2 },
 });
