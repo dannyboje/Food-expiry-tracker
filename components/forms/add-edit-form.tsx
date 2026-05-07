@@ -22,6 +22,7 @@ import { usePantry } from '@/hooks/use-pantry';
 import { generateId } from '@/utils/id';
 import { todayISO } from '@/utils/food-item-utils';
 import { consumeCameraResult } from '@/utils/camera-result-store';
+import { consumeScanResult } from '@/utils/scan-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
@@ -65,24 +66,41 @@ export function AddEditForm({ initialItem, prefill }: Props) {
     d.setDate(d.getDate() + 7);
     return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
   });
+  const [barcode, setBarcode] = useState<string | undefined>(base?.barcode);
+  const [category, setCategory] = useState<string>(base?.category || 'other');
+  const [nutriScore, setNutriScore] = useState<string | undefined>(base?.nutriScore);
+  const [novaGroup, setNovaGroup] = useState<number | undefined>(base?.novaGroup);
+  const [rawScore, setRawScore] = useState<number | undefined>(base?.rawScore);
   const [expiryPhotoUri, setExpiryPhotoUri] = useState<string | undefined>(base?.expiryPhotoUri);
   const [nutritionPhotoUri, setNutritionPhotoUri] = useState<string | undefined>(base?.nutritionPhotoUri);
+  const [expiryHint, setExpiryHint] = useState<string | undefined>(prefill?.expiryHint);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Pick up photo returned from nutrition camera screen
   useFocusEffect(
     useCallback(() => {
-      const result = consumeCameraResult();
-      if (result?.type === 'nutrition') setNutritionPhotoUri(result.uri);
-      if (result?.type === 'expiry') {
-        setExpiryPhotoUri(result.uri);
-        if (result.date) setExpiryDate(result.date);
+      const camera = consumeCameraResult();
+      if (camera?.type === 'nutrition') setNutritionPhotoUri(camera.uri);
+      if (camera?.type === 'expiry') {
+        setExpiryPhotoUri(camera.uri);
+        if (camera.date) setExpiryDate(camera.date);
+      }
+
+      const scan = consumeScanResult();
+      if (scan) {
+        if (scan.name) setName(scan.name);
+        if (scan.barcode) setBarcode(scan.barcode);
+        if (scan.category) setCategory(scan.category);
+        if (scan.nutriScore !== undefined) setNutriScore(scan.nutriScore);
+        if (scan.novaGroup !== undefined) setNovaGroup(scan.novaGroup);
+        if (scan.rawScore !== undefined) setRawScore(scan.rawScore);
+        if (scan.expiryDate) setExpiryDate(scan.expiryDate);
+        if (scan.expiryHint) setExpiryHint(scan.expiryHint);
       }
     }, [])
   );
 
-  const score = computeScore(base?.nutriScore, base?.novaGroup, base?.rawScore);
+  const score = computeScore(nutriScore, novaGroup, rawScore);
 
   async function handleSave() {
     if (!name.trim()) {
@@ -106,19 +124,19 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const item: FoodItem = {
         id: itemId,
         name: name.trim(),
-        category: base?.category || 'other',
+        category: (category || 'other') as FoodItem['category'],
         storageLocation: location,
         quantity,
         quantityUnit: unit,
         purchaseDate,
         expiryDate,
-        barcode: base?.barcode ?? initialItem?.barcode,
-        nutriScore: base?.nutriScore,
-        novaGroup: base?.novaGroup,
-        rawScore: base?.rawScore,
+        barcode,
+        nutriScore,
+        novaGroup,
+        rawScore,
         addedBy,
         expiryPhotoUri,
-        nutritionPhotoUri: nutritionPhotoUri,
+        nutritionPhotoUri,
         notificationIds: initialItem?.notificationIds ?? [],
         createdAt: initialItem?.createdAt ?? now,
         updatedAt: now,
@@ -133,7 +151,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       if (router.canDismiss()) {
         router.dismiss();
       } else {
-        router.back();
+        router.replace('/(tabs)');
       }
     } catch {
       setError('Failed to save. Please try again.');
@@ -177,10 +195,10 @@ export function AddEditForm({ initialItem, prefill }: Props) {
               <Text style={[styles.scoreChipText, { color: scoreColor(score) }]}>
                 Health Score · {scoreLabel(score)}
               </Text>
-              {base?.nutriScore && (
+              {nutriScore && (
                 <Text style={[styles.scoreChipSub, { color: colors.subtext }]}>
-                  Nutri-Score {base.nutriScore.toUpperCase()}
-                  {base.novaGroup ? `  ·  NOVA ${base.novaGroup}` : ''}
+                  Nutri-Score {nutriScore.toUpperCase()}
+                  {novaGroup ? `  ·  NOVA ${novaGroup}` : ''}
                 </Text>
               )}
             </View>
@@ -246,9 +264,9 @@ export function AddEditForm({ initialItem, prefill }: Props) {
             {resolvePhotoUri(expiryPhotoUri) && (
               <Image source={{ uri: resolvePhotoUri(expiryPhotoUri) }} style={styles.photoThumb} />
             )}
-            {prefill?.expiryHint && (
+            {expiryHint && (
               <Text style={[styles.expiryHint, { color: Brand.green }]}>
-                💡 {prefill.expiryHint}
+                💡 {expiryHint}
               </Text>
             )}
           </FormRow>
