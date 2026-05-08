@@ -31,7 +31,7 @@ const DEFAULT_LOCATION: Record<FoodCategory, StorageLocation> = {
   beverages:  'pantry',
   snacks:     'pantry',
   grains:     'pantry',
-  medicines:  'pantry',
+  medicines:  'meds',
   other:      'fridge',
 };
 

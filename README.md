@@ -1,6 +1,6 @@
 # Fresh Ahead — Track it. Use it. Waste less.
 
-Fresh Ahead helps you take control of your food, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, and pantry.
+Fresh Ahead helps you take control of your food and medications, reduce waste, and keep your household safe. Scan barcodes, track expiry dates, get smart alerts, and always know what's in your fridge, freezer, pantry, and medicine cabinet.
 
 **Available on iOS and Android.**
 - App Store: `https://apps.apple.com/app/id6766026185`
@@ -17,7 +17,7 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 - **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item.
 - **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
 - **Product image** — optionally take a photo of the product when adding it. The image is stored on your device and used as the item's icon throughout the app.
-- **Default storage location** — new items default to Pantry; change to Fridge or Freezer with one tap.
+- **Four storage locations** — Pantry, Fridge, Freezer, and Meds (medicine cabinet). Switch between them with one tap when adding an item.
 
 ### Know what's expiring
 - **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance.
@@ -41,6 +41,7 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 - **Manual additions** — type anything into the list, add it with one tap, and check it off as you shop.
 - **Edit on the fly** — tap the pencil icon to rename any item inline.
 - **Clear checked** — remove everything you've already bought with one tap.
+- **Clear all** — remove the entire list at once with a single confirmation tap.
 - **Restock badge** — items auto-added from your pantry are labelled so you always know why they're there.
 
 ### Food waste tracker
@@ -52,6 +53,7 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 - **Multiple members** — add everyone in your household so each pantry item shows who added it.
 - **Profile photo** — tap your avatar to set a photo from your library.
 - **Custom emoji** — each member can pick their own avatar emoji.
+- **Data management** — clear items added in the last 24 hours, or wipe the entire pantry to start fresh. Both options are disabled when the pantry is empty.
 - **Coming soon: shared household** — real-time pantry sharing across multiple devices is on the roadmap. For now, all data lives on your device, so household members are tracked locally for attribution purposes.
 
 ### Health & Nutrition
@@ -62,8 +64,8 @@ Fresh Ahead helps you take control of your food, reduce waste, and keep your hou
 - **Consumption tracking** — mark items as "used" or "wasted" to build a picture of your household's food habits over time.
 
 ### Settings & customisation
-- **Alert thresholds** — adjust how many days before expiry you want to be notified for each shelf-life tier.
-- **Daily digest** — opt in to a single daily summary notification instead of individual item alerts.
+- **Alert thresholds** — adjust how many days before expiry you want to be notified for each shelf-life tier (configurable per shelf-life band).
+- **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
 
 ---
 

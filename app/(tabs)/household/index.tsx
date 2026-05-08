@@ -9,7 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import KVStore from 'expo-sqlite/kv-store';
 import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
-import { DIGEST_ENABLED_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
+import { DIGEST_ENABLED_KEY, DIGEST_HOUR_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
 import { usePantry } from '@/hooks/use-pantry';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -108,6 +108,7 @@ export default function HouseholdScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [thresholds, setThresholds] = useState<AlertThresholds>(DEFAULT_THRESHOLDS);
   const [digestEnabled, setDigestEnabled] = useState(false);
+  const [digestHour, setDigestHour] = useState(9);
   const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
   const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
 
@@ -121,6 +122,9 @@ export default function HouseholdScreen() {
       .catch(() => {});
     KVStore.getItem(DIGEST_ENABLED_KEY)
       .then((val) => { if (val !== null) setDigestEnabled(val === 'true'); })
+      .catch(() => {});
+    KVStore.getItem(DIGEST_HOUR_KEY)
+      .then((val) => { if (val !== null) setDigestHour(Number(val)); })
       .catch(() => {});
     getAlertThresholds().then(setThresholds).catch(() => {});
   }, []);
@@ -140,10 +144,25 @@ export default function HouseholdScreen() {
     await KVStore.setItem(DIGEST_ENABLED_KEY, String(value));
     if (value) {
       await requestNotificationPermissions();
-      await scheduleDailyDigest(enrichedItems);
+      await scheduleDailyDigest(enrichedItems, digestHour);
     } else {
       await cancelDailyDigest();
     }
+  }
+
+  async function updateDigestHour(hour: number) {
+    setDigestHour(hour);
+    await KVStore.setItem(DIGEST_HOUR_KEY, String(hour));
+    if (digestEnabled) {
+      await scheduleDailyDigest(enrichedItems, hour);
+    }
+  }
+
+  function formatHour(h: number): string {
+    if (h === 0) return '12 AM';
+    if (h < 12) return `${h} AM`;
+    if (h === 12) return '12 PM';
+    return `${h - 12} PM`;
   }
 
   async function updateTier(key: keyof AlertThresholds, value: number) {
@@ -530,11 +549,11 @@ export default function HouseholdScreen() {
               thumbColor="#fff"
             />
           </View>
-          <View style={styles.settingsRow}>
+          <View style={[styles.settingsRow, digestEnabled && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Daily Pantry Digest</Text>
               <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>
-                Morning summary of items needing attention (9 AM)
+                Daily summary of items needing attention
               </Text>
             </View>
             <Switch
@@ -544,6 +563,28 @@ export default function HouseholdScreen() {
               thumbColor="#fff"
             />
           </View>
+          {digestEnabled && (
+            <View style={styles.settingsRow}>
+              <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Notification time</Text>
+              <View style={styles.hourRow}>
+                <TouchableOpacity
+                  style={[stepperStyles.btn, digestHour <= 6 && stepperStyles.btnDisabled]}
+                  onPress={() => updateDigestHour(Math.max(6, digestHour - 1))}
+                  disabled={digestHour <= 6}
+                  hitSlop={6}>
+                  <Text style={stepperStyles.btnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={[styles.hourValue, { color: colors.text }]}>{formatHour(digestHour)}</Text>
+                <TouchableOpacity
+                  style={[stepperStyles.btn, digestHour >= 22 && stepperStyles.btnDisabled]}
+                  onPress={() => updateDigestHour(Math.min(22, digestHour + 1))}
+                  disabled={digestHour >= 22}
+                  hitSlop={6}>
+                  <Text style={stepperStyles.btnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Alert schedule */}
@@ -578,22 +619,24 @@ export default function HouseholdScreen() {
         <Text style={[styles.settingsSub, { color: colors.subtext }]}>DATA MANAGEMENT</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity
-            style={[styles.dangerRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+            style={[styles.dangerRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, enrichedItems.length === 0 && styles.dangerRowDisabled]}
             onPress={handleClearRecent}
-            activeOpacity={0.7}>
-            <IconSymbol name="clock.arrow.trianglehead.counterclockwise.rotate.90" size={16} color="#F97316" />
+            activeOpacity={0.7}
+            disabled={enrichedItems.length === 0}>
+            <IconSymbol name="clock.arrow.trianglehead.counterclockwise.rotate.90" size={16} color={enrichedItems.length === 0 ? colors.subtext : '#F97316'} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.dangerTitle, { color: colors.text }]}>Clear last 24 hours</Text>
+              <Text style={[styles.dangerTitle, { color: enrichedItems.length === 0 ? colors.subtext : colors.text }]}>Clear last 24 hours</Text>
               <Text style={[styles.dangerSub, { color: colors.subtext }]}>Remove items added in the past 24 hours</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.dangerRow}
+            style={[styles.dangerRow, enrichedItems.length === 0 && styles.dangerRowDisabled]}
             onPress={handleClearAll}
-            activeOpacity={0.7}>
-            <IconSymbol name="trash" size={16} color="#EF4444" />
+            activeOpacity={0.7}
+            disabled={enrichedItems.length === 0}>
+            <IconSymbol name="trash" size={16} color={enrichedItems.length === 0 ? colors.subtext : '#EF4444'} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.dangerTitle, { color: '#EF4444' }]}>Clear entire pantry</Text>
+              <Text style={[styles.dangerTitle, { color: enrichedItems.length === 0 ? colors.subtext : '#EF4444' }]}>Clear entire pantry</Text>
               <Text style={[styles.dangerSub, { color: colors.subtext }]}>Delete all items and start fresh</Text>
             </View>
           </TouchableOpacity>
@@ -762,6 +805,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,
   },
+  dangerRowDisabled: { opacity: 0.4 },
   dangerTitle: { fontSize: 15, fontWeight: '500' },
   dangerSub: { fontSize: 12, marginTop: 2 },
+  hourRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hourValue: { fontSize: 14, fontWeight: '700', minWidth: 52, textAlign: 'center' },
 });

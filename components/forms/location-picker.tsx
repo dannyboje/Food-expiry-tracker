@@ -7,6 +7,7 @@ const OPTIONS: { value: StorageLocation; label: string; emoji: string }[] = [
   { value: 'pantry', label: 'Pantry', emoji: '🫙' },
   { value: 'fridge', label: 'Fridge', emoji: '🧊' },
   { value: 'freezer', label: 'Freezer', emoji: '❄️' },
+  { value: 'meds', label: 'Meds', emoji: '💊' },
 ];
 
 interface Props {
@@ -45,10 +46,12 @@ export function LocationPicker({ value, onChange }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   option: {
-    flex: 1,
+    flexBasis: '47%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

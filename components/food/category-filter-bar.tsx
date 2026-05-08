@@ -9,7 +9,8 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all',     label: 'All' },
   { key: 'fridge',  label: 'Fridge' },
   { key: 'freezer', label: 'Freezer' },
-  { key: 'pantry',  label: 'Dry Pantry' },
+  { key: 'pantry',  label: 'Pantry' },
+  { key: 'meds',    label: 'Meds' },
 ];
 
 interface Props {

@@ -59,6 +59,7 @@ const LOCATION_LABEL: Record<FoodItem['storageLocation'], string> = {
   fridge: 'fridge',
   freezer: 'freezer',
   pantry: 'pantry',
+  meds: 'meds cabinet',
 };
 
 export async function cancelItemNotifications(ids: string[]): Promise<void> {

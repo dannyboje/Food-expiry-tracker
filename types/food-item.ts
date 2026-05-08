@@ -1,4 +1,4 @@
-export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
+export type StorageLocation = 'fridge' | 'freezer' | 'pantry' | 'meds';
 
 export type FoodCategory =
   | 'dairy'

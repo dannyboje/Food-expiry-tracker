@@ -5,6 +5,7 @@ import type { FoodItemWithStatus } from '@/types/food-item';
 const WIDGET_DATA_KEY = '@widget_data';
 const DIGEST_NOTIF_ID_KEY = '@digest_notification_id';
 export const DIGEST_ENABLED_KEY = '@digest_enabled';
+export const DIGEST_HOUR_KEY = '@digest_hour';
 
 export interface WidgetData {
   expiringCount: number;
@@ -42,7 +43,7 @@ export async function getWidgetData(): Promise<WidgetData | null> {
   }
 }
 
-export async function scheduleDailyDigest(items: FoodItemWithStatus[]): Promise<void> {
+export async function scheduleDailyDigest(items: FoodItemWithStatus[], hour = 9): Promise<void> {
   const existingId = await KVStore.getItem(DIGEST_NOTIF_ID_KEY);
   if (existingId) {
     try { await Notifications.cancelScheduledNotificationAsync(existingId); } catch { /* ignore */ }
@@ -76,7 +77,7 @@ export async function scheduleDailyDigest(items: FoodItemWithStatus[]): Promise<
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: 9,
+        hour,
         minute: 0,
       },
     });

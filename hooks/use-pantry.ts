@@ -32,7 +32,8 @@ export function usePantry() {
     const fridge = enrichedItems.filter((i) => i.storageLocation === 'fridge').length;
     const freezer = enrichedItems.filter((i) => i.storageLocation === 'freezer').length;
     const pantry = enrichedItems.filter((i) => i.storageLocation === 'pantry').length;
-    return { all, fridge, freezer, pantry } as Record<StorageLocation | 'all', number>;
+    const meds = enrichedItems.filter((i) => i.storageLocation === 'meds').length;
+    return { all, fridge, freezer, pantry, meds } as Record<StorageLocation | 'all', number>;
   }, [enrichedItems]);
 
   const alertItems = useMemo(

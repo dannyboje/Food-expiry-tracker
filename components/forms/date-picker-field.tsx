@@ -1,7 +1,8 @@
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import { Colors } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface Props {
@@ -27,45 +28,93 @@ function toISO(date: Date): string {
 export function DatePickerField({ label, value, onChange }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [showAndroid, setShowAndroid] = useState(false);
-  const date = toDate(value);
+  const insets = useSafeAreaInsets();
+  const [showPicker, setShowPicker] = useState(false);
+  const [pendingDate, setPendingDate] = useState<Date>(toDate(value));
 
+  const date = toDate(value);
   const formatted = date.toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
   });
 
-  if (Platform.OS === 'ios') {
-    return (
-      <View style={styles.iosRow}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="compact"
-          accentColor="#22C55E"
-          onChange={(_, d) => d && onChange(toISO(d))}
-          style={styles.iosPicker}
-        />
-      </View>
-    );
+  function openPicker() {
+    setPendingDate(toDate(value));
+    setShowPicker(true);
+  }
+
+  function handleDone() {
+    onChange(toISO(pendingDate));
+    setShowPicker(false);
+  }
+
+  function handleCancel() {
+    setShowPicker(false);
   }
 
   return (
     <View>
       <Pressable
-        style={[styles.androidRow, { borderColor: colors.border, backgroundColor: colors.card }]}
-        onPress={() => setShowAndroid(true)}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        <Text style={[styles.value, { color: colors.text }]}>{formatted}</Text>
+        style={[styles.row, { borderColor: colors.border, backgroundColor: colors.card }]}
+        onPress={openPicker}>
+        {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
+        <Text style={[styles.dateValue, { color: colors.text }]}>{formatted}</Text>
       </Pressable>
-      {showAndroid && (
+
+      {/* iOS: transparent modal so the calendar appears at the top of the screen */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={handleCancel}>
+          {/* Tapping the backdrop cancels */}
+          <Pressable style={styles.backdrop} onPress={handleCancel}>
+            {/* Stop taps inside the card from closing the modal */}
+            <Pressable
+              style={[
+                styles.card,
+                {
+                  marginTop: insets.top + 8,
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}>
+              {/* Cancel / Done toolbar */}
+              <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={handleCancel} hitSlop={8}>
+                  <Text style={[styles.toolbarCancel, { color: colors.subtext }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleDone} hitSlop={8}>
+                  <Text style={[styles.toolbarDone, { color: Brand.green }]}>Done</Text>
+                </TouchableOpacity>
+              </View>
+
+              <DateTimePicker
+                value={pendingDate}
+                mode="date"
+                display="inline"
+                accentColor="#22C55E"
+                onChange={(_, d) => { if (d) setPendingDate(d); }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Android: native dialog handles its own positioning */}
+      {Platform.OS === 'android' && showPicker && (
         <DateTimePicker
           value={date}
           mode="date"
           display="default"
-          onChange={(_, d) => {
-            setShowAndroid(false);
-            if (d) onChange(toISO(d));
+          accentColor="#22C55E"
+          onChange={(event, d) => {
+            if (event.type === 'set' && d) {
+              setShowPicker(false);
+              onChange(toISO(d));
+            } else if (event.type === 'dismissed') {
+              setShowPicker(false);
+            }
           }}
         />
       )}
@@ -74,20 +123,7 @@ export function DatePickerField({ label, value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  iosRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  iosPicker: {
-    marginRight: -8,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  androidRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -96,7 +132,32 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  value: {
-    fontSize: 15,
+  label: { fontSize: 15, fontWeight: '500' },
+  dateValue: { fontSize: 15 },
+  // Modal
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 16,
   },
+  card: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  toolbarCancel: { fontSize: 15 },
+  toolbarDone: { fontSize: 15, fontWeight: '700' },
 });
