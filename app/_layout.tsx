@@ -2,6 +2,8 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import 'react-native-reanimated';
 
 import { PantryProvider } from '@/context/pantry-context';
@@ -16,6 +18,17 @@ export const unstable_settings = {
 export default function RootLayout() {
   useEffect(() => {
     initDatabase().catch(console.error);
+
+    // Android requires an explicit notification channel before any scheduling.
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Fresh Ahead',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#22C55E',
+      }).catch(console.error);
+    }
+
     requestNotificationPermissions()
       .then((granted) => { if (granted) scheduleDailyRecallCheck().catch(console.error); })
       .catch(console.error);

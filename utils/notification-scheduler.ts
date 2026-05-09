@@ -63,7 +63,9 @@ const LOCATION_LABEL: Record<FoodItem['storageLocation'], string> = {
 };
 
 export async function cancelItemNotifications(ids: string[]): Promise<void> {
-  await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
+  await Promise.all(
+    ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {}))
+  );
 }
 
 export async function scheduleItemNotification(item: FoodItem): Promise<string[]> {
@@ -84,19 +86,23 @@ export async function scheduleItemNotification(item: FoodItem): Promise<string[]
   const label = alertDaysBefore === 1 ? '1 day' : `${alertDaysBefore} days`;
   const location = LOCATION_LABEL[item.storageLocation];
 
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `${item.name} expires soon`,
-      body: `Expires in ${label} — check your ${location}`,
-      data: { itemId: item.id },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: triggerDate,
-    },
-  });
-
-  return [id];
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${item.name} expires soon`,
+        body: `Expires in ${label} — check your ${location}`,
+        data: { itemId: item.id },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
+    });
+    return [id];
+  } catch {
+    // Permission not granted or scheduling unavailable — save proceeds without a notification
+    return [];
+  }
 }
 
 export async function requestNotificationPermissions(): Promise<boolean> {

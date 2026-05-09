@@ -153,7 +153,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       } else {
         router.replace('/(tabs)');
       }
-    } catch {
+    } catch (e) {
+      console.error('[AddEditForm] save failed:', e);
       setError('Failed to save. Please try again.');
     } finally {
       setSaving(false);

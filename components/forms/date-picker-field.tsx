@@ -92,9 +92,11 @@ export function DatePickerField({ label, value, onChange }: Props) {
               <DateTimePicker
                 value={pendingDate}
                 mode="date"
-                display="inline"
+                display="spinner"
                 accentColor="#22C55E"
+                textColor={colorScheme === 'dark' ? '#ffffff' : '#000000'}
                 onChange={(_, d) => { if (d) setPendingDate(d); }}
+                style={styles.spinner}
               />
             </Pressable>
           </Pressable>
@@ -143,12 +145,14 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 16,
     elevation: 10,
+  },
+  spinner: {
+    height: 180,
   },
   toolbar: {
     flexDirection: 'row',
