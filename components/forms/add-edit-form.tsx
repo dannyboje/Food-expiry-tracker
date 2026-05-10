@@ -1,4 +1,5 @@
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -8,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -44,13 +46,13 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-
 export function AddEditForm({ initialItem, prefill }: Props) {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { addItem, updateItem } = usePantry();
+  const { addItem, updateItem, enrichedItems } = usePantry();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   const isEdit = !!initialItem;
   const base = initialItem ?? prefill;
@@ -96,8 +98,32 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         if (scan.rawScore !== undefined) setRawScore(scan.rawScore);
         if (scan.expiryDate) setExpiryDate(scan.expiryDate);
         if (scan.expiryHint) setExpiryHint(scan.expiryHint);
+
+        // Duplicate check — runs here because scan now uses scan-result-store
+        // (router.back()) instead of navigating with barcode URL params.
+        if (scan.barcode && !isEdit) {
+          const duplicate = enrichedItems.find((i) => i.barcode === scan.barcode);
+          if (duplicate) {
+            Alert.alert(
+              'Already in Pantry',
+              `"${duplicate.name}" with this barcode is already tracked. Add another entry or edit the existing one?`,
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => { if (router.canDismiss()) router.dismiss(); else router.back(); },
+                },
+                { text: 'Add Anyway', style: 'default' },
+                {
+                  text: 'Edit Existing',
+                  onPress: () => router.replace({ pathname: '/add-item', params: { editId: duplicate.id } }),
+                },
+              ]
+            );
+          }
+        }
       }
-    }, [])
+    }, [enrichedItems, isEdit])
   );
 
   const score = computeScore(nutriScore, novaGroup, rawScore);
@@ -114,7 +140,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       const now = new Date().toISOString();
       const itemId = initialItem?.id ?? generateId();
 
-      // Resolve who is adding this item (only for new items)
       let addedBy = initialItem?.addedBy;
       if (!isEdit) {
         const household = await loadHousehold();
@@ -170,9 +195,26 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+    <View style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          // Explicitly pin the container to the sheet detent height on iOS.
+          // Without this, flex:1 may receive the full window height from the native
+          // sheet layer, causing bottom:0 on the footer to land off-screen when
+          // scroll content grows (e.g. after adding a photo).
+          ...(Platform.OS === 'ios' && { height: windowHeight * 0.92 }),
+        },
+      ]}>
       <View style={[styles.modalHeader, { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+        {Platform.OS === 'android' && (
+          <TouchableOpacity
+            onPress={() => router.canDismiss() ? router.dismiss() : router.back()}
+            style={styles.headerCloseBtn}
+            hitSlop={8}>
+            <IconSymbol name="xmark" size={20} color={colors.subtext} />
+          </TouchableOpacity>
+        )}
         <Text style={[styles.modalTitle, { color: colors.text }]}>
           {isEdit ? 'Edit Item' : 'Add Item'}
         </Text>
@@ -180,14 +222,16 @@ export function AddEditForm({ initialItem, prefill }: Props) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        behavior="padding"
+        enabled={Platform.OS !== 'ios'}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          scrollIndicatorInsets={{ bottom: 0 }}>
 
-          {/* Health score chip — shown when product was scanned */}
           {score !== undefined && (
             <View style={[styles.scoreChip, { borderColor: scoreColor(score) }]}>
               <View style={[styles.scoreDot, { backgroundColor: scoreColor(score) }]}>
@@ -272,19 +316,25 @@ export function AddEditForm({ initialItem, prefill }: Props) {
             )}
           </FormRow>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-            activeOpacity={0.8}>
-            <Text style={styles.saveBtnText}>
-              {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add to Pantry'}
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Absolutely pinned footer — immune to sheet animation and KAV layout shifts */}
+      <View style={[
+        styles.stickyFooter,
+        { paddingBottom: insets.bottom + 12, borderTopColor: colors.border, backgroundColor: colors.background },
+      ]}>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+          activeOpacity={0.8}>
+          <Text style={styles.saveBtnText}>
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add to Pantry'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -298,13 +348,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
   },
   modalTitle: { fontSize: 18, fontWeight: '700' },
+  headerCloseBtn: { position: 'absolute', left: 16, padding: 4 },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16, gap: 20 },
-  // Score chip
+  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 130, gap: 20 },
+  stickyFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
   scoreChip: {
     borderWidth: 1.5,
     borderRadius: 12,
@@ -325,7 +384,6 @@ const styles = StyleSheet.create({
   scoreDotText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   scoreChipText: { fontSize: 14, fontWeight: '700', flex: 1 },
   scoreChipSub: { fontSize: 11, width: '100%', marginTop: -4 },
-  // Form
   formRow: { gap: 8 },
   rowLabel: {
     fontSize: 13,
@@ -371,7 +429,6 @@ const styles = StyleSheet.create({
   expiryHint: { fontSize: 12, fontStyle: 'italic', marginTop: 4 },
   errorText: { color: '#EF4444', fontSize: 13, fontWeight: '500' },
   saveBtn: {
-    marginTop: 8,
     backgroundColor: Brand.green,
     paddingVertical: 16,
     borderRadius: 14,

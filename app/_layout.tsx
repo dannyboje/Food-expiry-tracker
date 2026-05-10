@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as Notifications from 'expo-notifications';
 import 'react-native-reanimated';
 
@@ -16,6 +17,8 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+
   useEffect(() => {
     initDatabase().catch(console.error);
 
@@ -50,6 +53,7 @@ export default function RootLayout() {
               headerShown: false,
               sheetGrabberVisible: true,
               sheetAllowedDetents: [0.92],
+              sheetExpandsWhenScrolledToEdge: false,
             }}
           />
           <Stack.Screen
@@ -57,7 +61,7 @@ export default function RootLayout() {
             options={{ title: 'Item Details', headerBackTitle: 'Pantry' }}
           />
         </Stack>
-        <StatusBar style="dark" />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </PantryProvider>
     </ThemeProvider>
   );

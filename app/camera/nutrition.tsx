@@ -12,7 +12,7 @@ export default function NutritionCamera() {
 
   return (
     <PhotoCaptureView
-      hint="Point at the nutrition information label"
+      hint="Point at the product — this photo will be its pantry icon"
       onCapture={handleCapture}
       onCancel={() => router.back()}
     />

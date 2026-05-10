@@ -20,7 +20,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 };
 
 const LOCATION_LABEL: Record<string, string> = {
-  fridge: 'Fridge', freezer: 'Freezer', pantry: 'Dry pantry',
+  fridge: 'Fridge', freezer: 'Freezer', pantry: 'Dry pantry', meds: 'Medicine cabinet',
 };
 
 export default function ItemDetailScreen() {

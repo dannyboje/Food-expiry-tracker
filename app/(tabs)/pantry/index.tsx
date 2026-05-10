@@ -1,4 +1,4 @@
-import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,8 +75,13 @@ export default function PantryScreen() {
               value={localSearch}
               onChangeText={setLocalSearch}
               returnKeyType="search"
-              clearButtonMode="while-editing"
+              clearButtonMode={Platform.OS === 'ios' ? 'while-editing' : 'never'}
             />
+            {Platform.OS === 'android' && localSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setLocalSearch('')} hitSlop={8}>
+                <IconSymbol name="xmark.circle.fill" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
           </View>
         </SafeAreaView>
       </LinearGradient>

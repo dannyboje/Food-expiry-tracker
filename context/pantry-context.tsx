@@ -161,10 +161,16 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   // ── CRUD ─────────────────────────────────────────────────────────────────
 
   const addItem = useCallback(async (item: FoodItem) => {
-    const ids = await scheduleItemNotification(item);
-    const itemWithIds: FoodItem = { ...item, notificationIds: ids, updatedAt: new Date().toISOString() };
+    const itemWithIds: FoodItem = { ...item, notificationIds: [], updatedAt: new Date().toISOString() };
     await insertItem(itemWithIds);
     dispatch({ type: 'ADD_ITEM', payload: itemWithIds });
+    scheduleItemNotification(item)
+      .then((ids) => {
+        if (ids.length === 0) return;
+        const withIds = { ...itemWithIds, notificationIds: ids };
+        return dbUpdateItem(withIds).catch(() => {});
+      })
+      .catch(() => {});
     const newList = [...state.items, itemWithIds];
     syncAll(newList).catch(() => {});
     // Immediately check the new item against cached recalls (no network call needed).
@@ -179,10 +185,15 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   }, [state.items, state.recallAlerts]);
 
   const updateItem = useCallback(async (item: FoodItem) => {
-    const ids = await scheduleItemNotification(item);
-    const updated: FoodItem = { ...item, notificationIds: ids, updatedAt: new Date().toISOString() };
+    const updated: FoodItem = { ...item, updatedAt: new Date().toISOString() };
     await dbUpdateItem(updated);
     dispatch({ type: 'UPDATE_ITEM', payload: updated });
+    scheduleItemNotification(item)
+      .then((ids) => {
+        const withIds = { ...updated, notificationIds: ids };
+        return dbUpdateItem(withIds).catch(() => {});
+      })
+      .catch(() => {});
     const newList = state.items.map((i) => (i.id === updated.id ? updated : i));
     syncAll(newList).catch(() => {});
     // Re-check immediately in case the item name was changed to match a recall.
