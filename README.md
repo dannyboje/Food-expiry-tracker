@@ -14,30 +14,29 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 ### Track your food
 - **Add items manually** — enter the name, storage location, quantity, and expiry date in seconds.
 - **Scan a barcode** — the app looks up the product on Open Food Facts and pre-fills the details automatically, including the Nutri-Score and NOVA processing group.
-- **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item.
+- **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item to edit it.
 - **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
-- **Product image** — optionally take a photo of the product when adding it. The image is stored on your device and used as the item's icon throughout the app.
-- **Four storage locations** — Pantry, Fridge, Freezer, and Meds (medicine cabinet). Switch between them with one tap when adding an item.
+- **Product image** — optionally take a photo of the product when adding it. The photo is stored on your device and used as the item's icon in the pantry and detail views.
+- **Four storage locations** — Pantry, Fridge, Freezer, and Meds (medicine cabinet). Switch between them with one tap when adding or editing an item.
 
 ### Know what's expiring
 - **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance.
 - **Sorted by urgency** — items closest to expiry appear at the top of the list automatically.
-- **Smart notifications** — get a push notification before something expires. The alert window adapts to shelf life: 1 day for very short-lived items, up to 30 days for long-shelf-life products.
-- **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they're automatically removed.
+- **Smart notifications** — get a push notification before something expires. The alert window adapts to shelf life: 1 day ahead for very short-lived items, up to 60 days ahead for long-shelf-life products. All thresholds are adjustable in Settings.
+- **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they are automatically removed.
 
 ### Food safety recalls
 - **Daily recall check** — every morning at 9:30 AM the app checks three food safety databases: FDA (US), USDA FSIS (US), and the UK Food Standards Agency (FSA).
 - **Pantry matching** — if any recalled product name matches something in your pantry, a red safety alert appears immediately on the pantry screen.
 - **Immediate new-item check** — when you add or edit a pantry item, it's matched against the cached recall data right away, without waiting for the next daily check.
-- **Dismiss per item** — review each recall and dismiss alerts one by one, or clear them all at once.
+- **Dismiss per item** — review each recall alert and dismiss them one by one, or clear them all at once.
 
 ### Shopping list
 - **Auto-restock** — items are automatically added to your shopping list when they:
-  - Expire and are still in your pantry at app launch
   - Are auto-removed after the 20-day expired grace period
-  - Are manually deleted (discarded) from the pantry
+  - Are manually deleted from the pantry
   - Are marked as **used** (finished)
-  - Are marked as **wasted** (thrown away / expired)
+  - Are marked as **wasted** (thrown away or expired)
 - **Manual additions** — type anything into the list, add it with one tap, and check it off as you shop.
 - **Edit on the fly** — tap the pencil icon to rename any item inline.
 - **Clear checked** — remove everything you've already bought with one tap.
@@ -46,8 +45,9 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 
 ### Food waste tracker
 - **Monthly stats** — see how many items you used vs. wasted this month and your waste rate, calculated from this month's data only.
-- **Live updates** — figures refresh every time you open the Household tab, so they always reflect your latest pantry activity.
-- **Reset** — tap "Reset tracker" at the bottom of the stats card to clear all history. A confirmation step prevents accidental resets.
+- **Long-press to log** — long-press any pantry item and tap "I used it" or "It expired / wasted" to record it.
+- **Live updates** — figures refresh every time you open the Household tab.
+- **Reset** — tap "Reset tracker" to clear all history. A confirmation step prevents accidental resets.
 
 ### Household
 - **Multiple members** — add everyone in your household so each pantry item shows who added it.
@@ -59,12 +59,12 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 ### Health & Nutrition
 - **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.
 - **NOVA group** — see the food processing level (1 = unprocessed, 4 = ultra-processed) for every scanned product.
-- **Health score grades** — the Health tab shows grade breakdowns (A–E) counted from pantry items only, giving an accurate picture of what you currently have in stock.
-- **Product images in health view** — product photos appear alongside each item in the Health tab.
-- **Consumption tracking** — mark items as "used" or "wasted" to build a picture of your household's food habits over time.
+- **Health score** — a composite score (0–100) is calculated from Nutri-Score and NOVA group and shown on each item card and detail view.
+- **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
+- **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 
 ### Settings & customisation
-- **Alert thresholds** — adjust how many days before expiry you want to be notified for each shelf-life tier (configurable per shelf-life band).
+- **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
 - **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
 
 ---
@@ -73,8 +73,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 
 All data — pantry items, photos, recall alerts — stays on your device. The app only makes outbound requests to:
 
-- **Open Food Facts** (barcode lookups)
-- **USDA FoodData Central** (nutrition data)
+- **Open Food Facts** (barcode lookups and nutrition data)
 - **openFDA / USDA FSIS** (food safety recall checks)
 - **UK Food Standards Agency** (food safety recall checks)
 
@@ -96,6 +95,7 @@ No account required. No data is ever sent to any server we operate.
 | Field | Value |
 |---|---|
 | App name | Fresh Ahead |
+| Version | 1.0.0 |
 | iOS bundle ID | `com.freshahead.app` |
 | Android package | `com.freshahead.app` |
 | App Store ID | 6766026185 |
