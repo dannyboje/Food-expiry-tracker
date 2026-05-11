@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Brand } from '@/constants/theme';
 import type { RecallMatch } from '@/utils/recall-checker';
 
 interface Props {

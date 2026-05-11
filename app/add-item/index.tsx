@@ -42,7 +42,7 @@ export default function AddItemScreen() {
         },
       ]
     );
-  }, [state.isLoading, enrichedItems]);
+  }, [state.isLoading, enrichedItems, params.barcode, params.editId, router]);
 
   if (params.editId) {
     if (state.isLoading) return <LoadingScreen />;

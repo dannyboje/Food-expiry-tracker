@@ -133,10 +133,6 @@ export default function HealthScreen() {
       return s !== undefined && effectiveGrade(s) === grade;
     }).length;
 
-  const scoredCount = enrichedItems.filter(
-    (i) => computeScore(i.nutriScore, i.novaGroup, i.rawScore) !== undefined
-  ).length;
-
   // ── Renderers ────────────────────────────────────────────
 
   function renderPantryItem(item: FoodItemWithStatus) {

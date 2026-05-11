@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   },
   libraryBtn: { padding: 12 },
   cancelSmallBtn: { padding: 12 },
-  permContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
+  permContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16, backgroundColor: '#000' },
   permText: { textAlign: 'center', fontSize: 16, color: '#fff' },
   permBtn: {
     backgroundColor: Brand.green,

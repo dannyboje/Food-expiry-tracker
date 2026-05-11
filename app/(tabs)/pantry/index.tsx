@@ -1,4 +1,4 @@
-import { FlatList, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,7 +30,7 @@ export default function PantryScreen() {
   // Drive context search from debounced input — must be in effect, not render body
   useEffect(() => {
     setSearch(debounced);
-  }, [debounced]);
+  }, [debounced, setSearch]);
 
   if (state.isLoading) return <LoadingScreen />;
 

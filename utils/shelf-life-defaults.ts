@@ -1,5 +1,4 @@
 import type { FoodCategory, StorageLocation } from '@/types/food-item';
-import { todayISO } from './food-item-utils';
 
 // Typical shelf life in days from purchase date, by category × storage location
 const SHELF_LIFE: Record<FoodCategory, Partial<Record<StorageLocation, number>>> = {

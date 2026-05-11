@@ -521,7 +521,7 @@ export default function HouseholdScreen() {
             <Text style={[styles.settingsSub, { color: colors.subtext }]}>FOOD WASTE TRACKER</Text>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.codeHint, { color: colors.subtext }]}>
-                Long-press any pantry item and tap "I used it" or "It expired / wasted" to start tracking your food usage.
+                {`Long-press any pantry item and tap "I used it" or "It expired / wasted" to start tracking your food usage.`}
               </Text>
             </View>
           </>
@@ -779,6 +779,7 @@ const styles = StyleSheet.create({
   settingsTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
   settingsSub: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginTop: 12 },
   settingsHint: { fontSize: 12, lineHeight: 16, marginBottom: 4 },
+  codeHint: { fontSize: 13, lineHeight: 18, padding: 4 },
   settingsRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, justifyContent: 'space-between',

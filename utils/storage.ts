@@ -2,12 +2,28 @@ import * as SQLite from 'expo-sqlite';
 import type { FoodItem } from '@/types/food-item';
 
 let db: SQLite.SQLiteDatabase | null = null;
+// Cache the open promise so concurrent callers before the DB is ready all
+// await the same openDatabaseAsync call instead of opening multiple connections.
+let dbOpenPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('pantry.db');
+  if (db) return db;
+  if (!dbOpenPromise) {
+    dbOpenPromise = SQLite.openDatabaseAsync('pantry.db').then((database) => {
+      db = database;
+      return database;
+    });
   }
-  return db;
+  return dbOpenPromise;
+}
+
+// Serialize all writes so concurrent fire-and-forget updates (e.g. notification ID
+// backfill) don't race with user-triggered saves and cause "database is locked" on Android.
+let writeQueue: Promise<unknown> = Promise.resolve();
+function queueWrite<T>(fn: () => Promise<T>): Promise<T> {
+  const next = writeQueue.then(() => fn(), () => fn());
+  writeQueue = next.then(() => {}, () => {});
+  return next;
 }
 
 export async function initDatabase(): Promise<void> {
@@ -81,87 +97,99 @@ export async function getItemById(id: string): Promise<FoodItem | null> {
   return row ? rowToItem(row) : null;
 }
 
-export async function insertItem(item: FoodItem): Promise<void> {
-  const database = await getDb();
-  await database.runAsync(
-    `INSERT INTO food_items (
-      id, name, category, storage_location, quantity, quantity_unit,
-      purchase_date, expiry_date, barcode, nutri_score, nova_group, raw_score,
-      added_by, expiry_photo_uri, nutrition_photo_uri, notification_ids, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      item.id, item.name, item.category, item.storageLocation,
-      item.quantity, item.quantityUnit, item.purchaseDate, item.expiryDate,
-      item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
-      item.rawScore ?? null, item.addedBy ?? null,
-      item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
-      JSON.stringify(item.notificationIds), item.createdAt, item.updatedAt,
-    ]
-  );
+export function insertItem(item: FoodItem): Promise<void> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    await database.runAsync(
+      `INSERT INTO food_items (
+        id, name, category, storage_location, quantity, quantity_unit,
+        purchase_date, expiry_date, barcode, nutri_score, nova_group, raw_score,
+        added_by, expiry_photo_uri, nutrition_photo_uri, notification_ids, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        item.id, item.name, item.category, item.storageLocation,
+        item.quantity, item.quantityUnit, item.purchaseDate, item.expiryDate,
+        item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
+        item.rawScore ?? null, item.addedBy ?? null,
+        item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
+        JSON.stringify(item.notificationIds), item.createdAt, item.updatedAt,
+      ]
+    );
+  });
 }
 
-export async function updateItem(item: FoodItem): Promise<void> {
-  const database = await getDb();
-  await database.runAsync(
-    `UPDATE food_items SET
-      name = ?, category = ?, storage_location = ?, quantity = ?,
-      quantity_unit = ?, purchase_date = ?, expiry_date = ?,
-      barcode = ?, nutri_score = ?, nova_group = ?, raw_score = ?,
-      added_by = ?, expiry_photo_uri = ?, nutrition_photo_uri = ?,
-      notification_ids = ?, updated_at = ?
-    WHERE id = ?`,
-    [
-      item.name, item.category, item.storageLocation, item.quantity,
-      item.quantityUnit, item.purchaseDate, item.expiryDate,
-      item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
-      item.rawScore ?? null, item.addedBy ?? null,
-      item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
-      JSON.stringify(item.notificationIds), item.updatedAt, item.id,
-    ]
-  );
+export function updateItem(item: FoodItem): Promise<void> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    await database.runAsync(
+      `UPDATE food_items SET
+        name = ?, category = ?, storage_location = ?, quantity = ?,
+        quantity_unit = ?, purchase_date = ?, expiry_date = ?,
+        barcode = ?, nutri_score = ?, nova_group = ?, raw_score = ?,
+        added_by = ?, expiry_photo_uri = ?, nutrition_photo_uri = ?,
+        notification_ids = ?, updated_at = ?
+      WHERE id = ?`,
+      [
+        item.name, item.category, item.storageLocation, item.quantity,
+        item.quantityUnit, item.purchaseDate, item.expiryDate,
+        item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
+        item.rawScore ?? null, item.addedBy ?? null,
+        item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
+        JSON.stringify(item.notificationIds), item.updatedAt, item.id,
+      ]
+    );
+  });
 }
 
-export async function deleteItem(id: string): Promise<void> {
-  const database = await getDb();
-  await database.runAsync('DELETE FROM food_items WHERE id = ?', [id]);
+export function deleteItem(id: string): Promise<void> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    await database.runAsync('DELETE FROM food_items WHERE id = ?', [id]);
+  });
 }
 
-export async function deleteAllItems(): Promise<FoodItem[]> {
-  const database = await getDb();
-  const rows = await database.getAllAsync<Record<string, unknown>>('SELECT * FROM food_items');
-  const items = rows.map(rowToItem);
-  if (items.length > 0) {
-    await database.runAsync('DELETE FROM food_items');
-  }
-  return items;
+export function deleteAllItems(): Promise<FoodItem[]> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    const rows = await database.getAllAsync<Record<string, unknown>>('SELECT * FROM food_items');
+    const items = rows.map(rowToItem);
+    if (items.length > 0) {
+      await database.runAsync('DELETE FROM food_items');
+    }
+    return items;
+  });
 }
 
-export async function deleteItemsCreatedAfter(since: string): Promise<FoodItem[]> {
-  const database = await getDb();
-  const rows = await database.getAllAsync<Record<string, unknown>>(
-    'SELECT * FROM food_items WHERE created_at >= ?',
-    [since]
-  );
-  const items = rows.map(rowToItem);
-  if (items.length > 0) {
-    await database.runAsync('DELETE FROM food_items WHERE created_at >= ?', [since]);
-  }
-  return items;
+export function deleteItemsCreatedAfter(since: string): Promise<FoodItem[]> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    const rows = await database.getAllAsync<Record<string, unknown>>(
+      'SELECT * FROM food_items WHERE created_at >= ?',
+      [since]
+    );
+    const items = rows.map(rowToItem);
+    if (items.length > 0) {
+      await database.runAsync('DELETE FROM food_items WHERE created_at >= ?', [since]);
+    }
+    return items;
+  });
 }
 
 // Returns items that were deleted so callers can cancel their notifications.
-export async function cleanupExpiredItems(daysPastExpiry: number): Promise<FoodItem[]> {
-  const database = await getDb();
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - daysPastExpiry);
-  const cutoffDate = cutoff.toISOString().split('T')[0];
-  const rows = await database.getAllAsync<Record<string, unknown>>(
-    'SELECT * FROM food_items WHERE expiry_date < ?',
-    [cutoffDate]
-  );
-  const items = rows.map(rowToItem);
-  if (items.length > 0) {
-    await database.runAsync('DELETE FROM food_items WHERE expiry_date < ?', [cutoffDate]);
-  }
-  return items;
+export function cleanupExpiredItems(daysPastExpiry: number): Promise<FoodItem[]> {
+  return queueWrite(async () => {
+    const database = await getDb();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysPastExpiry);
+    const cutoffDate = cutoff.toISOString().split('T')[0];
+    const rows = await database.getAllAsync<Record<string, unknown>>(
+      'SELECT * FROM food_items WHERE expiry_date < ?',
+      [cutoffDate]
+    );
+    const items = rows.map(rowToItem);
+    if (items.length > 0) {
+      await database.runAsync('DELETE FROM food_items WHERE expiry_date < ?', [cutoffDate]);
+    }
+    return items;
+  });
 }

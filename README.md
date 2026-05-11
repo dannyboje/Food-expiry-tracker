@@ -6,13 +6,14 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - App Store: `https://apps.apple.com/app/id6766026185`
 - Google Play: `https://play.google.com/store/apps/details?id=com.freshahead.app`
 - Website: `https://yoganjaliconsultancy.co.uk`
+- How-to video: `https://youtu.be/0lq54AIQ5io`
 
 ---
 
 ## What you can do
 
 ### Track your food
-- **Add items manually** — enter the name, storage location, quantity, and expiry date in seconds.
+- **Add items manually** — enter the name, storage location, quantity, and expiry date in seconds. The app validates that the expiry date is not before the purchase date.
 - **Scan a barcode** — the app looks up the product on Open Food Facts and pre-fills the details automatically, including the Nutri-Score and NOVA processing group.
 - **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item to edit it.
 - **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
@@ -20,7 +21,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Four storage locations** — Pantry, Fridge, Freezer, and Meds (medicine cabinet). Switch between them with one tap when adding or editing an item.
 
 ### Know what's expiring
-- **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance.
+- **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance. The item detail view shows "Expiring" when an item is approaching its date and "Expired" once it has passed.
 - **Sorted by urgency** — items closest to expiry appear at the top of the list automatically.
 - **Smart notifications** — get a push notification before something expires. The alert window adapts to shelf life: 1 day ahead for very short-lived items, up to 60 days ahead for long-shelf-life products. All thresholds are adjustable in Settings.
 - **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they are automatically removed.
@@ -38,7 +39,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
   - Are marked as **used** (finished)
   - Are marked as **wasted** (thrown away or expired)
 - **Manual additions** — type anything into the list, add it with one tap, and check it off as you shop.
-- **Edit on the fly** — tap the pencil icon to rename any item inline.
+- **Edit on the fly** — tap the pencil icon to rename any item inline. Tap the tick to save or the X to cancel; the keyboard is automatically scrolled clear of the item being edited.
 - **Clear checked** — remove everything you've already bought with one tap.
 - **Clear all** — remove the entire list at once with a single confirmation tap.
 - **Restock badge** — items auto-added from your pantry are labelled so you always know why they're there.

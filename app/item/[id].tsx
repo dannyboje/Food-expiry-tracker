@@ -48,6 +48,7 @@ export default function ItemDetailScreen() {
         </View>
       ),
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item, colors, navigation]);
 
   if (!item) {

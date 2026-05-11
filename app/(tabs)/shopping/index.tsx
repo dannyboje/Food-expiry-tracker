@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import {
-  Alert, FlatList, StyleSheet, Text, TextInput,
-  TouchableOpacity, View,
+  Alert, FlatList, KeyboardAvoidingView, Platform,
+  StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
@@ -23,6 +24,9 @@ export default function ShoppingScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const editRef = useRef<TextInput>(null);
+  const flatListRef = useRef<FlatList<ShoppingItem>>(null);
+  // Set to true in onPressIn so onBlur doesn't cancel before onPress fires
+  const suppressBlurRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,18 +54,31 @@ export default function ShoppingScreen() {
   }
 
   function startEdit(item: ShoppingItem) {
+    suppressBlurRef.current = false;
     setEditingId(item.id);
     setEditingName(item.name);
     setTimeout(() => editRef.current?.focus(), 50);
+    const index = items.findIndex((i) => i.id === item.id);
+    if (index !== -1) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0, viewOffset: 16 });
+      }, 350);
+    }
   }
 
   function commitEdit() {
+    suppressBlurRef.current = false;
     const name = editingName.trim();
     if (!name) {
       setEditingId(null);
       return;
     }
     persist(items.map((i) => (i.id === editingId ? { ...i, name } : i)));
+    setEditingId(null);
+  }
+
+  function cancelEdit() {
+    suppressBlurRef.current = false;
     setEditingId(null);
   }
 
@@ -88,9 +105,14 @@ export default function ShoppingScreen() {
   }
 
   const pantryCount = items.filter((i) => i.fromPantry && !i.checked).length;
+  const tabBarHeight = useBottomTabBarHeight();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? tabBarHeight : 0}
+    >
       <BgFoodDecor />
       <LinearGradient
         colors={['#8BD1A5', '#91E2AF', '#A5EFC0']}
@@ -139,8 +161,11 @@ export default function ShoppingScreen() {
       </LinearGradient>
 
       <FlatList
+        ref={flatListRef}
         data={items}
         keyExtractor={(i) => i.id}
+        keyboardShouldPersistTaps="handled"
+        onScrollToIndexFailed={() => {}}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.subtext }]}>
@@ -167,7 +192,7 @@ export default function ShoppingScreen() {
                     value={editingName}
                     onChangeText={setEditingName}
                     onSubmitEditing={commitEdit}
-                    onBlur={commitEdit}
+                    onBlur={() => { if (!suppressBlurRef.current) cancelEdit(); }}
                     returnKeyType="done"
                     autoFocus
                   />
@@ -196,6 +221,7 @@ export default function ShoppingScreen() {
               {/* Edit / confirm button */}
               {!item.checked && (
                 <TouchableOpacity
+                  onPressIn={() => { if (isEditing) suppressBlurRef.current = true; }}
                   onPress={isEditing ? commitEdit : () => startEdit(item)}
                   style={styles.actionBtn}
                   hitSlop={6}>
@@ -207,15 +233,19 @@ export default function ShoppingScreen() {
                 </TouchableOpacity>
               )}
 
-              {/* Delete button */}
-              <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.actionBtn} hitSlop={6}>
+              {/* Delete / cancel-edit button */}
+              <TouchableOpacity
+                onPressIn={() => { if (isEditing) suppressBlurRef.current = true; }}
+                onPress={() => isEditing ? cancelEdit() : removeItem(item.id)}
+                style={styles.actionBtn}
+                hitSlop={6}>
                 <IconSymbol name="xmark" size={16} color={colors.subtext} />
               </TouchableOpacity>
             </View>
           );
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

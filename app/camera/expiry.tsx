@@ -58,7 +58,7 @@ export default function ExpiryCamera() {
         setOcrFound(false);
         setOcrMessage("Couldn't detect the date — please enter it manually below");
       }
-    } catch (e) {
+    } catch {
       setOcrFound(false);
       setOcrMessage("Couldn't read the photo — please enter the date manually");
     } finally {

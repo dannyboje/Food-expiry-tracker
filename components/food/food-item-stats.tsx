@@ -35,7 +35,9 @@ export function FoodItemStats({ item }: Props) {
       </View>
 
       <View style={[styles.stat, styles.bordered, { borderRightColor: colors.border }]}>
-        <Text style={[styles.label, { color: colors.subtext }]}>Expiring</Text>
+        <Text style={[styles.label, { color: colors.subtext }]}>
+          {item.status === 'expired' ? 'Expired' : 'Expiring'}
+        </Text>
         <Text style={[styles.value, { color: expiryColor }]}>{expiryLabel}</Text>
       </View>
 

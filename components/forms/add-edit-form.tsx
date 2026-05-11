@@ -123,7 +123,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
           }
         }
       }
-    }, [enrichedItems, isEdit])
+    }, [enrichedItems, isEdit, router])
   );
 
   const score = computeScore(nutriScore, novaGroup, rawScore);
@@ -131,6 +131,10 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   async function handleSave() {
     if (!name.trim()) {
       setError('Product name is required');
+      return;
+    }
+    if (expiryDate < purchaseDate) {
+      setError('Expiry date cannot be before purchase date');
       return;
     }
     setError('');
@@ -172,17 +176,20 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       } else {
         await addItem(item);
       }
-
-      if (router.canDismiss()) {
-        router.dismiss();
-      } else {
-        router.replace('/(tabs)');
-      }
     } catch (e) {
       console.error('[AddEditForm] save failed:', e);
       setError('Failed to save. Please try again.');
-    } finally {
       setSaving(false);
+      return;
+    }
+
+    // Navigate outside the try/catch — navigation errors must not be mistaken
+    // for save failures (on Android, router calls can throw in edge cases).
+    setSaving(false);
+    if (router.canDismiss()) {
+      router.dismiss();
+    } else {
+      router.replace('/(tabs)');
     }
   }
 
