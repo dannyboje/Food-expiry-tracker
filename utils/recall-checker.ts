@@ -251,6 +251,18 @@ export async function runRecallCheck(items: FoodItem[]): Promise<RecallMatch[]> 
   const dismissed = await getDismissed();
   const matches = matchRecalls(allRecalls, items, dismissed);
   await storeAlerts(matches);
-  await setLastCheckDate(new Date().toISOString().split('T')[0]);
+  // Only stamp today's date when at least one API responded — prevents silently
+  // skipping tomorrow's check when all three APIs were unreachable today.
+  if (allRecalls.length > 0) {
+    await setLastCheckDate(new Date().toISOString().split('T')[0]);
+  }
   return matches;
+}
+
+export async function dismissAllAlerts(pairIds: string[]): Promise<void> {
+  if (pairIds.length === 0) return;
+  const dismissed = await getDismissed();
+  for (const pairId of pairIds) dismissed.add(pairId);
+  await KVStore.setItem(DISMISSED_KEY, JSON.stringify([...dismissed]));
+  await storeAlerts([]);
 }

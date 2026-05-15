@@ -15,14 +15,17 @@
         "NSCameraUsageDescription": "Used to scan barcodes and photograph expiry dates and nutrition labels.",
         "NSPhotoLibraryUsageDescription": "Used to select photos of expiry dates and nutrition labels from your library.",
         "NSUserNotificationsUsageDescription": "Used to alert you before food items expire.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSLocationWhenInUseUsageDescription": "Used to find healthier product alternatives available in your country.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["https", "http"]
       }
     },
     "android": {
       "package": "com.freshahead.app",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
@@ -67,6 +70,12 @@
         }
       ],
       "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Used to find healthier product alternatives available in your country."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

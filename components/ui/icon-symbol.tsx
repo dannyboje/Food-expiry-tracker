@@ -37,6 +37,7 @@ const MAPPING = {
   'xmark': 'close',
   'magnifyingglass': 'search',
   'slider.horizontal.3': 'tune',
+  'cart.fill': 'shopping-cart',
   'cart.badge.plus': 'add-shopping-cart',
   'info.circle': 'info',
   'person.2.fill': 'group',

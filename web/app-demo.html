@@ -225,6 +225,22 @@
       text-align: center; font-size: 12px; font-weight: 800;
       margin-top: 10px;
     }
+    /* Alternatives mini-list inside scanner card */
+    .alts-box {
+      background: #F0FDF4; border-radius: 8px;
+      padding: 8px; margin-top: 8px; display: flex; flex-direction: column; gap: 5px;
+    }
+    .alts-title { font-size: 9px; font-weight: 800; color: #166534; margin-bottom: 2px; }
+    .alt-row {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .alt-badge {
+      width: 20px; height: 20px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 900; color: #fff; flex-shrink: 0;
+    }
+    .alt-name { flex: 1; font-size: 9px; font-weight: 600; color: var(--text); }
+    .alt-cart { font-size: 10px; }
 
     /* ── NOTIFICATION ── */
     .notif {
@@ -489,16 +505,29 @@
           </div>
           <div class="scan-hint">Align barcode within the frame</div>
           <div class="scan-result" id="scanResult">
-            <div class="scan-result-title">Greek Yogurt — Fage</div>
-            <div class="scan-result-brand">Dairy · Barcode: 5054781001134</div>
+            <div class="scan-result-title">Cheddar Cheese — Cathedral City</div>
+            <div class="scan-result-brand">Dairy · Barcode: 5000152110012</div>
             <div class="scan-result-score">
-              <div class="score-circle" style="background:#1EA54C;">82</div>
+              <div class="score-circle" style="background:#EF8714;">38</div>
               <div>
-                <div class="score-label" style="color:#1EA54C;">Health Score · Excellent</div>
-                <div class="score-sub">Nutri-Score A · NOVA 1 · Unprocessed</div>
+                <div class="score-label" style="color:#EF8714;">Health Score · Poor</div>
+                <div class="score-sub">Nutri-Score D · NOVA 2 · Processed</div>
               </div>
             </div>
-            <div class="scan-add-btn">Add to Pantry</div>
+            <div class="alts-box">
+              <div class="alts-title">🥗 Healthier alternatives · Local to United Kingdom</div>
+              <div class="alt-row">
+                <div class="alt-badge" style="background:#1EA54C;">A</div>
+                <div class="alt-name">Yeo Valley Organic Natural Yogurt</div>
+                <div class="alt-cart">🛒</div>
+              </div>
+              <div class="alt-row">
+                <div class="alt-badge" style="background:#85BB2F;">B</div>
+                <div class="alt-name">Chobani Plain Greek Yogurt</div>
+                <div class="alt-cart">🛒</div>
+              </div>
+            </div>
+            <div class="scan-add-btn">Want it? Start adding to Pantry</div>
           </div>
         </div>
       </div>
@@ -709,7 +738,7 @@
     <div class="caption" id="cap3">
       <div class="caption-num">02 — SCAN</div>
       <h2>Scan a barcode in seconds</h2>
-      <p>Point your camera at any product. Fresh Ahead pulls the name, brand, and health score instantly.</p>
+      <p>Point your camera at any product. Fresh Ahead pulls the health score instantly — and suggests healthier local alternatives if the score is low.</p>
     </div>
     <div class="caption" id="cap4">
       <div class="caption-num">03 — ALERTS</div>
@@ -724,7 +753,7 @@
     <div class="caption" id="cap6">
       <div class="caption-num">05 — HEALTH</div>
       <h2>Make healthier choices</h2>
-      <p>Every product gets a health score based on Nutri-Score, NOVA group, and nutritional data.</p>
+      <p>Every product gets a health score based on Nutri-Score and NOVA group. Low-scoring items show local healthier alternatives you can swap to right away.</p>
     </div>
     <div class="caption" id="cap7">
       <div class="caption-num">FRESH AHEAD</div>

@@ -7,7 +7,7 @@ export default function ScanScreen() {
 
   return (
     <BarcodeScannerView
-      onScan={({ barcode, name, category, nutriScore, novaGroup, fatSecretScore, suggestedExpiryDate }) => {
+      onScan={({ barcode, name, category, nutriScore, novaGroup, fatSecretScore, suggestedExpiryDate, alternatives }) => {
         setScanResult({
           barcode,
           name: name ?? undefined,
@@ -17,6 +17,7 @@ export default function ScanScreen() {
           rawScore: fatSecretScore ?? undefined,
           expiryDate: suggestedExpiryDate ?? undefined,
           expiryHint: suggestedExpiryDate ? 'Estimated from typical shelf life for this category' : undefined,
+          alternatives,
         });
         router.back();
       }}

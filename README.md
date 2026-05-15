@@ -61,6 +61,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.
 - **NOVA group** — see the food processing level (1 = unprocessed, 4 = ultra-processed) for every scanned product.
 - **Health score** — a composite score (0–100) is calculated from Nutri-Score and NOVA group and shown on each item card and detail view.
+- **Healthier alternatives** — when you scan a product rated Fair, Poor, or Bad (score below 60), the app instantly suggests up to 3 healthier alternatives (Nutri-Score A or B) in the same food category. Alternatives are prioritised by your GPS location so they're products available to buy locally. Tap the cart icon next to any alternative to search for it on Google Shopping. The alternatives are saved with the pantry item and displayed on the item detail page, just above the full nutrition panel.
 - **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
 - **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 

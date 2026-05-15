@@ -17,6 +17,14 @@ export type FoodCategory =
 
 export type QuantityUnit = 'pcs' | 'g' | 'kg' | 'ml' | 'l' | 'oz' | 'lbs';
 
+export interface ProductAlternative {
+  barcode: string;
+  name: string;
+  brand?: string;
+  nutriScore: string;   // 'a' or 'b'
+  imageUri?: string;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -33,6 +41,7 @@ export interface FoodItem {
   addedBy?: string;           // display name of the household member who added this item
   expiryPhotoUri?: string;    // permanent local file URI
   nutritionPhotoUri?: string; // permanent local file URI, optional
+  alternatives?: ProductAlternative[]; // healthier alternatives surfaced at scan time
   notificationIds: string[];  // expo-notifications IDs
   createdAt: string;          // ISO timestamp
   updatedAt: string;          // ISO timestamp

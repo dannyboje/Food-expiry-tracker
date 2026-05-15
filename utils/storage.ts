@@ -55,6 +55,7 @@ export async function initDatabase(): Promise<void> {
   try { await database.execAsync('ALTER TABLE food_items ADD COLUMN nova_group INTEGER'); } catch {}
   try { await database.execAsync('ALTER TABLE food_items ADD COLUMN raw_score INTEGER'); } catch {}
   try { await database.execAsync('ALTER TABLE food_items ADD COLUMN added_by TEXT'); } catch {}
+  try { await database.execAsync('ALTER TABLE food_items ADD COLUMN alternatives TEXT'); } catch {}
 }
 
 function rowToItem(row: Record<string, unknown>): FoodItem {
@@ -74,6 +75,7 @@ function rowToItem(row: Record<string, unknown>): FoodItem {
     addedBy: row.added_by as string | undefined,
     expiryPhotoUri: row.expiry_photo_uri as string | undefined,
     nutritionPhotoUri: row.nutrition_photo_uri as string | undefined,
+    alternatives: (() => { try { return JSON.parse((row.alternatives as string) || '[]'); } catch { return []; } })(),
     notificationIds: (() => { try { return JSON.parse((row.notification_ids as string) || '[]'); } catch { return []; } })(),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -104,14 +106,15 @@ export function insertItem(item: FoodItem): Promise<void> {
       `INSERT INTO food_items (
         id, name, category, storage_location, quantity, quantity_unit,
         purchase_date, expiry_date, barcode, nutri_score, nova_group, raw_score,
-        added_by, expiry_photo_uri, nutrition_photo_uri, notification_ids, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        added_by, expiry_photo_uri, nutrition_photo_uri, alternatives, notification_ids, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         item.id, item.name, item.category, item.storageLocation,
         item.quantity, item.quantityUnit, item.purchaseDate, item.expiryDate,
         item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
         item.rawScore ?? null, item.addedBy ?? null,
         item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
+        JSON.stringify(item.alternatives ?? []),
         JSON.stringify(item.notificationIds), item.createdAt, item.updatedAt,
       ]
     );
@@ -127,7 +130,7 @@ export function updateItem(item: FoodItem): Promise<void> {
         quantity_unit = ?, purchase_date = ?, expiry_date = ?,
         barcode = ?, nutri_score = ?, nova_group = ?, raw_score = ?,
         added_by = ?, expiry_photo_uri = ?, nutrition_photo_uri = ?,
-        notification_ids = ?, updated_at = ?
+        alternatives = ?, notification_ids = ?, updated_at = ?
       WHERE id = ?`,
       [
         item.name, item.category, item.storageLocation, item.quantity,
@@ -135,6 +138,7 @@ export function updateItem(item: FoodItem): Promise<void> {
         item.barcode ?? null, item.nutriScore ?? null, item.novaGroup ?? null,
         item.rawScore ?? null, item.addedBy ?? null,
         item.expiryPhotoUri ?? null, item.nutritionPhotoUri ?? null,
+        JSON.stringify(item.alternatives ?? []),
         JSON.stringify(item.notificationIds), item.updatedAt, item.id,
       ]
     );
@@ -183,12 +187,12 @@ export function cleanupExpiredItems(daysPastExpiry: number): Promise<FoodItem[]>
     cutoff.setDate(cutoff.getDate() - daysPastExpiry);
     const cutoffDate = cutoff.toISOString().split('T')[0];
     const rows = await database.getAllAsync<Record<string, unknown>>(
-      'SELECT * FROM food_items WHERE expiry_date < ?',
+      'SELECT * FROM food_items WHERE expiry_date <= ?',
       [cutoffDate]
     );
     const items = rows.map(rowToItem);
     if (items.length > 0) {
-      await database.runAsync('DELETE FROM food_items WHERE expiry_date < ?', [cutoffDate]);
+      await database.runAsync('DELETE FROM food_items WHERE expiry_date <= ?', [cutoffDate]);
     }
     return items;
   });

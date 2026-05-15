@@ -8,7 +8,7 @@ import { recordConsumption, type ConsumptionType } from '@/utils/consumption-sto
 import { enrichItem } from '@/utils/food-item-utils';
 import { syncWidgetData, scheduleDailyDigest, cancelDailyDigest, DIGEST_ENABLED_KEY } from '@/utils/widget-data-sync';
 import { syncExpiredToShoppingList, addRemovedToShoppingList } from '@/utils/shopping-store';
-import { runRecallCheck, runMatchOnCachedRecalls, shouldRunCheck, getStoredAlerts, dismissAlert, type RecallMatch } from '@/utils/recall-checker';
+import { runRecallCheck, runMatchOnCachedRecalls, shouldRunCheck, getStoredAlerts, dismissAlert, dismissAllAlerts, type RecallMatch } from '@/utils/recall-checker';
 import KVStore from 'expo-sqlite/kv-store';
 
 interface PantryState {
@@ -71,6 +71,7 @@ interface PantryContextValue {
   setSearch: (q: string) => void;
   setFilter: (f: StorageLocation | 'all') => void;
   dismissRecallAlert: (pairId: string) => Promise<void>;
+  clearAllRecallAlerts: () => Promise<void>;
   clearAllPantryItems: () => Promise<void>;
   clearRecentPantryItems: () => Promise<void>;
 }
@@ -168,6 +169,7 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
       .then((ids) => {
         if (ids.length === 0) return;
         const withIds = { ...itemWithIds, notificationIds: ids };
+        dispatch({ type: 'UPDATE_ITEM', payload: withIds });
         return dbUpdateItem(withIds).catch(() => {});
       })
       .catch(() => {});
@@ -191,6 +193,7 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     scheduleItemNotification(item)
       .then((ids) => {
         const withIds = { ...updated, notificationIds: ids };
+        dispatch({ type: 'UPDATE_ITEM', payload: withIds });
         return dbUpdateItem(withIds).catch(() => {});
       })
       .catch(() => {});
@@ -237,6 +240,12 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     await dismissAlert(pairId);
   }, []);
 
+  const clearAllRecallAlerts = useCallback(async () => {
+    const pairIds = state.recallAlerts.map((a) => a.pairId);
+    dispatch({ type: 'SET_RECALL_ALERTS', payload: [] });
+    await dismissAllAlerts(pairIds);
+  }, [state.recallAlerts]);
+
   const clearAllPantryItems = useCallback(async () => {
     const deleted = await deleteAllItems();
     for (const item of deleted) {
@@ -261,7 +270,7 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   return (
     <PantryContext.Provider value={{
       state, addItem, updateItem, deleteItem, markAsUsed,
-      setSearch, setFilter, dismissRecallAlert,
+      setSearch, setFilter, dismissRecallAlert, clearAllRecallAlerts,
       clearAllPantryItems, clearRecentPantryItems,
     }}>
       {children}

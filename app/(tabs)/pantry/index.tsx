@@ -23,7 +23,7 @@ export default function PantryScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { state, filteredItems, counts, alertItems, expiredCount, setSearch, setFilter, dismissRecallAlert } = usePantry();
+  const { state, filteredItems, counts, alertItems, expiredCount, setSearch, setFilter, dismissRecallAlert, clearAllRecallAlerts } = usePantry();
   const [localSearch, setLocalSearch] = useState('');
   const debounced = useDebounce(localSearch, 250);
 
@@ -90,7 +90,7 @@ export default function PantryScreen() {
       <RecallAlertBanner
         alerts={state.recallAlerts}
         onDismiss={dismissRecallAlert}
-        onDismissAll={() => state.recallAlerts.forEach((a) => dismissRecallAlert(a.pairId))}
+        onDismissAll={clearAllRecallAlerts}
       />
 
       {/* Expired banner */}

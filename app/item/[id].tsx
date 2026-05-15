@@ -1,4 +1,4 @@
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,119 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePantry } from '@/hooks/use-pantry';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
+import type { ProductAlternative } from '@/types/food-item';
+
+const NUTRI_COLOR: Record<string, string> = {
+  a: '#1EA54C', b: '#85BB2F', c: '#F5C900', d: '#EF8714', e: '#E63E11',
+};
+
+function openShoppingSearch(name: string, brand?: string) {
+  const q = [brand, name].filter(Boolean).join(' ');
+  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`).catch(() => {
+    Linking.openURL(`https://www.google.com/search?q=${encodeURIComponent(q)}+buy+online`).catch(() => {});
+  });
+}
+
+function AlternativesSection({
+  alternatives,
+  colors,
+}: {
+  alternatives: ProductAlternative[];
+  colors: { text: string; subtext: string; card: string; border: string; background: string };
+}) {
+  return (
+    <View style={[altStyles.card, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
+      <Text style={altStyles.heading}>Healthier alternatives</Text>
+      <Text style={[altStyles.subheading, { color: colors.subtext }]}>
+        Nutri-Score A or B products in the same category
+      </Text>
+      {alternatives.map((alt) => (
+        <View key={alt.barcode} style={[altStyles.row, { borderTopColor: '#D1FAE5' }]}>
+          {alt.imageUri ? (
+            <Image source={{ uri: alt.imageUri }} style={altStyles.image} />
+          ) : (
+            <View style={[altStyles.imagePlaceholder, { backgroundColor: NUTRI_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
+              <Text style={altStyles.placeholderLetter}>{alt.nutriScore.toUpperCase()}</Text>
+            </View>
+          )}
+          <View style={altStyles.info}>
+            <Text style={[altStyles.name, { color: colors.text }]} numberOfLines={2}>{alt.name}</Text>
+            {alt.brand ? (
+              <Text style={[altStyles.brand, { color: colors.subtext }]} numberOfLines={1}>{alt.brand}</Text>
+            ) : null}
+          </View>
+          <View style={[altStyles.badge, { backgroundColor: NUTRI_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
+            <Text style={altStyles.badgeLetter}>{alt.nutriScore.toUpperCase()}</Text>
+          </View>
+          <TouchableOpacity
+            style={altStyles.shopBtn}
+            onPress={() => openShoppingSearch(alt.name, alt.brand)}
+            hitSlop={8}>
+            <IconSymbol name="cart.fill" size={16} color="#16A34A" />
+          </TouchableOpacity>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const altStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  heading: { fontSize: 15, fontWeight: '800', color: '#166534' },
+  subheading: { fontSize: 12, marginTop: -4, marginBottom: 2 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  image: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    resizeMode: 'contain',
+    backgroundColor: '#F9FAFB',
+    flexShrink: 0,
+  },
+  imagePlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  placeholderLetter: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  info: { flex: 1, gap: 2 },
+  name: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
+  brand: { fontSize: 11 },
+  badge: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  badgeLetter: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  shopBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+});
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   dairy: '🥛', meat: '🥩', seafood: '🐟', produce: '🥦',
@@ -93,9 +206,9 @@ export default function ItemDetailScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.hero}>
           <View style={styles.heroIconWrap}>
-            {resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri) ? (
+            {resolvePhotoUri(item.nutritionPhotoUri ?? item.expiryPhotoUri) ? (
               <Image
-                source={{ uri: resolvePhotoUri(item.expiryPhotoUri ?? item.nutritionPhotoUri)! }}
+                source={{ uri: resolvePhotoUri(item.nutritionPhotoUri ?? item.expiryPhotoUri)! }}
                 style={styles.heroPhoto}
               />
             ) : (
@@ -128,9 +241,16 @@ export default function ItemDetailScreen() {
                     item.novaGroup ? `NOVA ${item.novaGroup}` : null,
                   ].filter(Boolean).join('  ·  ')}
                 </Text>
-                <Text style={[styles.scoreSource, { color: colors.subtext }]}>
-                  via Open Food Facts
-                </Text>
+                {(item.nutriScore || item.novaGroup) && (
+                  <Text style={[styles.scoreSource, { color: colors.subtext }]}>
+                    via Open Food Facts
+                  </Text>
+                )}
+                {!item.nutriScore && !item.novaGroup && item.rawScore !== undefined && (
+                  <Text style={[styles.scoreSource, { color: colors.subtext }]}>
+                    via USDA FoodData Central
+                  </Text>
+                )}
               </View>
             </View>
           );
@@ -138,6 +258,11 @@ export default function ItemDetailScreen() {
 
         {/* Stats row */}
         <FoodItemStats item={item} />
+
+        {/* Healthier alternatives */}
+        {(item.alternatives?.length ?? 0) > 0 && (
+          <AlternativesSection alternatives={item.alternatives!} colors={colors} />
+        )}
 
         {/* Yuka-style OFF nutritional panel */}
         {item.barcode && (

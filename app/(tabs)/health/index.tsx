@@ -289,7 +289,7 @@ export default function HealthScreen() {
         keyExtractor={(item) => {
           if (item.kind === 'section') return `section-${item.title}`;
           if (item.kind === 'pantry') return `pantry-${item.item.id}`;
-          return `scan-${item.scan.barcode}`;
+          return `scan-${item.scan.barcode}-${item.scan.scannedAt}`;
         }}
         renderItem={renderItem}
         contentContainerStyle={[styles.list, isEmpty && styles.listEmpty]}

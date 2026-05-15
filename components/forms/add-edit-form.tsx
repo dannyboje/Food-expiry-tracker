@@ -28,7 +28,7 @@ import { consumeScanResult } from '@/utils/scan-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
-import type { FoodItem, QuantityUnit, StorageLocation } from '@/types/food-item';
+import type { FoodItem, ProductAlternative, QuantityUnit, StorageLocation } from '@/types/food-item';
 
 interface Props {
   initialItem?: FoodItem;
@@ -76,6 +76,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [expiryPhotoUri, setExpiryPhotoUri] = useState<string | undefined>(base?.expiryPhotoUri);
   const [nutritionPhotoUri, setNutritionPhotoUri] = useState<string | undefined>(base?.nutritionPhotoUri);
   const [expiryHint, setExpiryHint] = useState<string | undefined>(prefill?.expiryHint);
+  const [alternatives, setAlternatives] = useState<ProductAlternative[]>(base?.alternatives ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -98,9 +99,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         if (scan.rawScore !== undefined) setRawScore(scan.rawScore);
         if (scan.expiryDate) setExpiryDate(scan.expiryDate);
         if (scan.expiryHint) setExpiryHint(scan.expiryHint);
+        if (scan.alternatives?.length) setAlternatives(scan.alternatives);
 
-        // Duplicate check — runs here because scan now uses scan-result-store
-        // (router.back()) instead of navigating with barcode URL params.
         if (scan.barcode && !isEdit) {
           const duplicate = enrichedItems.find((i) => i.barcode === scan.barcode);
           if (duplicate) {
@@ -166,6 +166,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         addedBy,
         expiryPhotoUri,
         nutritionPhotoUri,
+        alternatives: alternatives.length > 0 ? alternatives : undefined,
         notificationIds: initialItem?.notificationIds ?? [],
         createdAt: initialItem?.createdAt ?? now,
         updatedAt: now,
@@ -176,20 +177,17 @@ export function AddEditForm({ initialItem, prefill }: Props) {
       } else {
         await addItem(item);
       }
+
+      if (router.canDismiss()) {
+        router.dismiss();
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e) {
       console.error('[AddEditForm] save failed:', e);
       setError('Failed to save. Please try again.');
+    } finally {
       setSaving(false);
-      return;
-    }
-
-    // Navigate outside the try/catch — navigation errors must not be mistaken
-    // for save failures (on Android, router calls can throw in edge cases).
-    setSaving(false);
-    if (router.canDismiss()) {
-      router.dismiss();
-    } else {
-      router.replace('/(tabs)');
     }
   }
 
@@ -206,10 +204,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         styles.container,
         {
           backgroundColor: colors.background,
-          // Explicitly pin the container to the sheet detent height on iOS.
-          // Without this, flex:1 may receive the full window height from the native
-          // sheet layer, causing bottom:0 on the footer to land off-screen when
-          // scroll content grows (e.g. after adding a photo).
           ...(Platform.OS === 'ios' && { height: windowHeight * 0.92 }),
         },
       ]}>
@@ -239,6 +233,30 @@ export function AddEditForm({ initialItem, prefill }: Props) {
           nestedScrollEnabled
           scrollIndicatorInsets={{ bottom: 0 }}>
 
+          <FormRow label="Product name">
+            <View style={styles.nameRow}>
+              <TextInput
+                style={[
+                  styles.nameInput,
+                  { color: colors.text, borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g. Banana"
+                placeholderTextColor={colors.subtext}
+                returnKeyType="done"
+                multiline
+                blurOnSubmit
+              />
+              <TouchableOpacity
+                style={[styles.scanBtn, { borderColor: Brand.green, backgroundColor: colors.card }]}
+                onPress={openBarcodeScanner}>
+                <IconSymbol name="barcode.viewfinder" size={28} color={Brand.green} />
+                <Text style={[styles.scanBtnText, { color: Brand.green }]}>Scan</Text>
+              </TouchableOpacity>
+            </View>
+          </FormRow>
+
           {score !== undefined && (
             <View style={[styles.scoreChip, { borderColor: scoreColor(score) }]}>
               <View style={[styles.scoreDot, { backgroundColor: scoreColor(score) }]}>
@@ -255,27 +273,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
               )}
             </View>
           )}
-
-          <FormRow label="Product name">
-            <View style={styles.nameRow}>
-              <TextInput
-                style={[
-                  styles.nameInput,
-                  { color: colors.text, borderColor: colors.border, backgroundColor: colors.card },
-                ]}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Banana"
-                placeholderTextColor={colors.subtext}
-                returnKeyType="done"
-              />
-              <TouchableOpacity
-                style={[styles.iconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-                onPress={openBarcodeScanner}>
-                <IconSymbol name="barcode.viewfinder" size={22} color={Brand.green} />
-              </TouchableOpacity>
-            </View>
-          </FormRow>
 
           <FormRow label="Product image (optional)">
             <Text style={[styles.photoHint, { color: colors.subtext }]}>
@@ -401,19 +398,28 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', gap: 8 },
   nameInput: {
     flex: 1,
-    height: 46,
+    minHeight: 64,
     borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    textAlignVertical: 'top',
   },
-  iconBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1,
+  scanBtn: {
+    width: 76,
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+  },
+  scanBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   photoHint: { fontSize: 12, marginTop: -4, marginBottom: 2 },
   photoBtn: {

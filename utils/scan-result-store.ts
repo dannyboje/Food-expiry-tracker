@@ -1,3 +1,5 @@
+import type { ProductAlternative } from '@/types/food-item';
+
 export interface ScanResult {
   barcode?: string;
   name?: string;
@@ -7,6 +9,7 @@ export interface ScanResult {
   rawScore?: number;
   expiryDate?: string;
   expiryHint?: string;
+  alternatives?: ProductAlternative[];
 }
 
 let pending: ScanResult | null = null;
