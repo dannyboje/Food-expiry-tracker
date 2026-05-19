@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -12,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
 import { DatePickerField } from './date-picker-field';
@@ -28,7 +29,12 @@ import { consumeScanResult } from '@/utils/scan-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
+import { searchProducts, mapCategory, type SALProduct } from '@/utils/search-a-licious';
 import type { FoodItem, ProductAlternative, QuantityUnit, StorageLocation } from '@/types/food-item';
+
+const NUTRI_COLOR: Record<string, string> = {
+  a: '#1EA54C', b: '#85BB2F', c: '#F5C900', d: '#EF8714', e: '#E63E11',
+};
 
 interface Props {
   initialItem?: FoodItem;
@@ -79,6 +85,11 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [alternatives, setAlternatives] = useState<ProductAlternative[]>(base?.alternatives ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState<SALProduct[]>([]);
+  const [searchingName, setSearchingName] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(searchTimer.current), []);
 
   useFocusEffect(
     useCallback(() => {
@@ -127,6 +138,30 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   );
 
   const score = computeScore(nutriScore, novaGroup, rawScore);
+
+  function handleNameChange(text: string) {
+    setName(text);
+    setSuggestions([]);
+    clearTimeout(searchTimer.current);
+    if (text.trim().length < 3) return;
+    setSearchingName(true);
+    searchTimer.current = setTimeout(async () => {
+      const results = await searchProducts(text.trim(), 5);
+      setSuggestions(results);
+      setSearchingName(false);
+    }, 400);
+  }
+
+  function applySuggestion(product: SALProduct) {
+    setName(product.name);
+    setBarcode(product.barcode);
+    if (product.nutriScore) setNutriScore(product.nutriScore);
+    if (product.novaGroup) setNovaGroup(product.novaGroup);
+    const firstTag = product.offCategories[0];
+    if (firstTag) setCategory(mapCategory(firstTag) ?? 'other');
+    setSuggestions([]);
+    setSearchingName(false);
+  }
 
   async function handleSave() {
     if (!name.trim()) {
@@ -241,7 +276,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                   { color: colors.text, borderColor: colors.border, backgroundColor: colors.card },
                 ]}
                 value={name}
-                onChangeText={setName}
+                onChangeText={handleNameChange}
+                onBlur={() => setTimeout(() => setSuggestions([]), 150)}
                 placeholder="e.g. Banana"
                 placeholderTextColor={colors.subtext}
                 returnKeyType="done"
@@ -255,6 +291,45 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 <Text style={[styles.scanBtnText, { color: Brand.green }]}>Scan</Text>
               </TouchableOpacity>
             </View>
+
+            {searchingName && (
+              <ActivityIndicator size="small" color={Brand.green} style={styles.searchSpinner} />
+            )}
+
+            {suggestions.length > 0 && (
+              <View style={[styles.suggestions, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                {suggestions.map((s) => (
+                  <TouchableOpacity
+                    key={s.barcode}
+                    style={[styles.suggestionRow, { borderBottomColor: colors.border }]}
+                    onPress={() => applySuggestion(s)}
+                    activeOpacity={0.7}>
+                    <View style={styles.suggestionInfo}>
+                      <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>
+                        {s.name}
+                      </Text>
+                      {s.brand ? (
+                        <Text style={[styles.suggestionBrand, { color: colors.subtext }]} numberOfLines={1}>
+                          {s.brand}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.suggestionBadges}>
+                      {s.nutriScore ? (
+                        <View style={[styles.nutriBadge, { backgroundColor: NUTRI_COLOR[s.nutriScore] }]}>
+                          <Text style={styles.nutriBadgeText}>{s.nutriScore.toUpperCase()}</Text>
+                        </View>
+                      ) : null}
+                      {s.novaGroup ? (
+                        <Text style={[styles.novaBadgeText, { color: colors.subtext }]}>
+                          NOVA {s.novaGroup}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </FormRow>
 
           {score !== undefined && (
@@ -454,4 +529,30 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  searchSpinner: { alignSelf: 'flex-start', marginTop: 4 },
+  suggestions: {
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  suggestionInfo: { flex: 1 },
+  suggestionName: { fontSize: 14, fontWeight: '600' },
+  suggestionBrand: { fontSize: 12, marginTop: 1 },
+  suggestionBadges: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  nutriBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  nutriBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900' },
+  novaBadgeText: { fontSize: 11, fontWeight: '600' },
 });

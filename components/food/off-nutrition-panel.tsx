@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchOFFDetail, type OFFDetail } from '@/utils/off-detail';
+import { classifyAdditives } from '@/utils/additive-classifier';
 
 interface Props {
   barcode: string;
@@ -191,45 +192,70 @@ export function OFFNutritionPanel({ barcode, nutriScore, novaGroup }: Props) {
             ))}
           </View>
 
-          <NutrientRow label="Energy" value={nutrients!.energyKcal} unit="kcal"
+          <NutrientRow label="⚡ Energy" value={nutrients!.energyKcal} unit="kcal"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Fat" value={nutrients!.fat} unit="g" colorKey="fat"
+          <NutrientRow label="🧈 Fat" value={nutrients!.fat} unit="g" colorKey="fat"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Saturated fat" value={nutrients!.saturatedFat} unit="g" colorKey="saturatedFat" indent
+          <NutrientRow label="💧 Saturated fat" value={nutrients!.saturatedFat} unit="g" colorKey="saturatedFat" indent
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Carbohydrates" value={nutrients!.carbohydrates} unit="g"
+          <NutrientRow label="🌾 Carbohydrates" value={nutrients!.carbohydrates} unit="g"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="of which sugars" value={nutrients!.sugars} unit="g" colorKey="sugars" indent
+          <NutrientRow label="🍬 of which sugars" value={nutrients!.sugars} unit="g" colorKey="sugars" indent
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Dietary fiber" value={nutrients!.fiber} unit="g"
+          <NutrientRow label="🌿 Dietary fiber" value={nutrients!.fiber} unit="g"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Proteins" value={nutrients!.proteins} unit="g"
+          <NutrientRow label="💪 Proteins" value={nutrients!.proteins} unit="g"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
-          <NutrientRow label="Salt" value={nutrients!.salt} unit="g" colorKey="salt"
+          <NutrientRow label="🧂 Salt" value={nutrients!.salt} unit="g" colorKey="salt"
             textColor={colors.text} subtextColor={colors.subtext} borderColor={colors.border} />
         </View>
       )}
 
-      {/* Additives */}
-      {additives.length > 0 && (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.additiveHeader}>
+      {/* Additives — split into harmful and generally-safe groups */}
+      {additives.length > 0 && (() => {
+        const { harmful, preservatives, safe } = classifyAdditives(additives);
+        return (
+          <View style={[styles.card, { backgroundColor: '#FFF5F5', borderColor: '#FECACA' }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Additives</Text>
-            <View style={[styles.additiveBadge, {
-              backgroundColor: additives.length > 5 ? '#FEE2E2' : '#FEF3C7',
-            }]}>
-              <Text style={[styles.additiveBadgeText, {
-                color: additives.length > 5 ? '#DC2626' : '#D97706',
-              }]}>
-                {additives.length}
-              </Text>
-            </View>
+
+            {harmful.length > 0 && (
+              <View style={styles.additiveGroup}>
+                <View style={styles.additiveHeader}>
+                  <Text style={[styles.additiveGroupLabel, { color: '#DC2626' }]}>☠️ Harmful</Text>
+                  <View style={[styles.additiveBadge, { backgroundColor: '#FEE2E2' }]}>
+                    <Text style={[styles.additiveBadgeText, { color: '#DC2626' }]}>{harmful.length}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.additiveList, { color: '#DC2626' }]}>{harmful.join('  ·  ')}</Text>
+              </View>
+            )}
+
+            {preservatives.length > 0 && (
+              <View style={[styles.additiveGroup, harmful.length > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#BFDBFE', paddingTop: 10 }]}>
+                <View style={styles.additiveHeader}>
+                  <Text style={[styles.additiveGroupLabel, { color: '#2563EB' }]}>🧪 Preservatives</Text>
+                  <View style={[styles.additiveBadge, { backgroundColor: '#DBEAFE' }]}>
+                    <Text style={[styles.additiveBadgeText, { color: '#2563EB' }]}>{preservatives.length}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.additiveList, { color: '#2563EB' }]}>{preservatives.join('  ·  ')}</Text>
+              </View>
+            )}
+
+            {safe.length > 0 && (
+              <View style={[styles.additiveGroup, (harmful.length > 0 || preservatives.length > 0) && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#FED7AA', paddingTop: 10 }]}>
+                <View style={styles.additiveHeader}>
+                  <Text style={[styles.additiveGroupLabel, { color: '#D97706' }]}>🌱 Generally safe</Text>
+                  <View style={[styles.additiveBadge, { backgroundColor: '#FEF3C7' }]}>
+                    <Text style={[styles.additiveBadgeText, { color: '#D97706' }]}>{safe.length}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.additiveList, { color: '#D97706' }]}>{safe.join('  ·  ')}</Text>
+              </View>
+            )}
           </View>
-          <Text style={[styles.additiveList, { color: colors.subtext }]}>
-            {additives.join('  ·  ')}
-          </Text>
-        </View>
-      )}
+        );
+      })()}
 
       {/* Ingredients */}
       {ingredientsText ? (
@@ -309,6 +335,8 @@ const styles = StyleSheet.create({
   nutriValue: { fontSize: 14, fontWeight: '600' },
   trafficDot: { width: 10, height: 10, borderRadius: 5 },
   // Additives
+  additiveGroup: { gap: 6 },
+  additiveGroupLabel: { fontSize: 13, fontWeight: '700' },
   additiveHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   additiveBadge: {
     minWidth: 22, height: 22, borderRadius: 11,

@@ -1,4 +1,4 @@
-import { Animated, ActivityIndicator, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ActivityIndicator, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
@@ -6,58 +6,14 @@ import { Brand } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { lookupBarcodeOnUsda } from '@/utils/usda';
+import { lookupProductByBarcode, mapCategory } from '@/utils/search-a-licious';
+import { fetchOFFDetail, type OFFDetail } from '@/utils/off-detail';
+import { classifyAdditives, computeAdditiveModifier } from '@/utils/additive-classifier';
 import { saveRecentScan } from '@/utils/recent-scans-store';
 import { getSuggestedExpiryDate } from '@/utils/shelf-life-defaults';
+import { fetchAlternatives, resolveUserCountryTag, formatCountryTag } from '@/utils/alternatives';
 import type { ProductAlternative } from '@/types/food-item';
 
-// ISO 3166-1 alpha-2 → Open Food Facts countries_tags value
-const ISO_TO_OFF_COUNTRY: Record<string, string> = {
-  GB: 'en:united-kingdom', US: 'en:united-states', FR: 'en:france',
-  DE: 'en:germany', IT: 'en:italy', ES: 'en:spain', NL: 'en:netherlands',
-  BE: 'en:belgium', CH: 'en:switzerland', AT: 'en:austria', SE: 'en:sweden',
-  NO: 'en:norway', DK: 'en:denmark', FI: 'en:finland', PL: 'en:poland',
-  PT: 'en:portugal', GR: 'en:greece', IE: 'en:ireland', CZ: 'en:czechia',
-  HU: 'en:hungary', RO: 'en:romania', CA: 'en:canada', AU: 'en:australia',
-  NZ: 'en:new-zealand', IN: 'en:india', JP: 'en:japan', KR: 'en:south-korea',
-  CN: 'en:china', SG: 'en:singapore', MY: 'en:malaysia', TH: 'en:thailand',
-  PH: 'en:philippines', ID: 'en:indonesia', BR: 'en:brazil', MX: 'en:mexico',
-  AR: 'en:argentina', CO: 'en:colombia', CL: 'en:chile', ZA: 'en:south-africa',
-  NG: 'en:nigeria', EG: 'en:egypt', SA: 'en:saudi-arabia', AE: 'en:united-arab-emirates',
-  TR: 'en:turkey', UA: 'en:ukraine', RU: 'en:russia', PK: 'en:pakistan',
-  BD: 'en:bangladesh', LK: 'en:sri-lanka', IL: 'en:israel',
-};
-
-// undefined = not yet tried, null = tried and denied/failed, string = resolved tag
-let cachedUserCountryTag: string | null | undefined;
-
-async function resolveUserCountryTag(): Promise<string | undefined> {
-  // Valid tag cached — return immediately without any system calls
-  if (cachedUserCountryTag) return cachedUserCountryTag;
-
-  // Previously denied — check current permission status without showing a prompt.
-  // Handles the case where the user granted location in Settings after the first denial.
-  if (cachedUserCountryTag === null) {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') return undefined;
-    cachedUserCountryTag = undefined; // reset so the full flow below runs
-  }
-
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') { cachedUserCountryTag = null; return undefined; }
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest });
-    const [place] = await Location.reverseGeocodeAsync(
-      { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
-    );
-    const isoCode = place?.isoCountryCode ?? '';
-    const tag = ISO_TO_OFF_COUNTRY[isoCode.toUpperCase()] ?? null;
-    cachedUserCountryTag = tag;
-    return tag ?? undefined;
-  } catch {
-    cachedUserCountryTag = null;
-    return undefined;
-  }
-}
 
 interface ScanResult {
   barcode: string;
@@ -72,11 +28,13 @@ interface ScanResult {
   /** Direct 0–100 score from USDA (used only when OFF has no data) */
   fatSecretScore?: number;
   /** Which API provided the score */
-  scoreSource?: 'openfoodfacts' | 'usda';
+  scoreSource?: 'openfoodfacts' | 'usda' | 'search-a-licious';
   /** YYYY-MM-DD expiry estimate based on category shelf life */
   suggestedExpiryDate?: string;
   /** Healthier alternatives surfaced during the scan — stored with the pantry item */
   alternatives?: ProductAlternative[];
+  /** True when all upstream sources returned no data (e.g. OFf server outage) */
+  allSourcesFailed?: boolean;
 }
 
 interface Props {
@@ -98,6 +56,18 @@ function fetchWithTimeout(url: string, ms = 8000): Promise<Response> {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
+// UK FSA traffic-light thresholds per 100g
+const TRAFFIC_THRESHOLDS: Record<string, [number, number]> = {
+  fat: [3, 17.5], saturatedFat: [1.5, 5], sugars: [5, 22.5], salt: [0.3, 1.5],
+};
+function trafficColor(key: string, value: number): string {
+  const t = TRAFFIC_THRESHOLDS[key];
+  if (!t) return '#374151';
+  if (value < t[0]) return '#1EA54C';
+  if (value < t[1]) return '#EF8714';
+  return '#E63E11';
+}
+
 async function lookupOnOpenFoodFacts(barcode: string): Promise<Omit<ScanResult, 'barcode'>> {
   try {
     // v2 API with field selection is faster and more reliable than v0
@@ -105,7 +75,9 @@ async function lookupOnOpenFoodFacts(barcode: string): Promise<Omit<ScanResult, 
     const res = await fetchWithTimeout(
       `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=${fields}`
     );
-    if (!res.ok) return {};
+    // Check Content-Type — OFf returns an HTML error page on 502/503 outages
+    const ct = res.headers.get('content-type') ?? '';
+    if (!res.ok || !ct.includes('json')) return {};
     const json = await res.json();
     if (json.status === 1 && json.product) {
       const p = json.product;
@@ -156,180 +128,33 @@ async function lookupBarcode(barcode: string): Promise<Omit<ScanResult, 'barcode
       };
     }
   } catch {
-    // USDA also failed — return whatever OFF gave us
+    // USDA also failed — fall through to Search-a-licious
   }
 
-  return off;
-}
+  // Last resort: Search-a-licious (Elasticsearch-backed OFf search)
+  try {
+    const sal = await lookupProductByBarcode(barcode);
+    if (sal) {
+      return {
+        name: off.name ?? sal.name,
+        category: off.category ?? (sal.offCategories[0] ? mapCategory(sal.offCategories[0]) : undefined),
+        offCategories: off.offCategories ?? sal.offCategories,
+        countryTag: off.countryTag,
+        nutriScore: sal.nutriScore,
+        novaGroup: sal.novaGroup,
+        scoreSource: sal.nutriScore || sal.novaGroup ? 'search-a-licious' : undefined,
+      };
+    }
+  } catch {
+    // All sources exhausted
+  }
 
-function mapCategory(tag: string): string | undefined {
-  if (!tag) return undefined;
-  const t = tag.toLowerCase();
-  if (t.includes('dairy') || t.includes('milk') || t.includes('cheese')) return 'dairy';
-  if (t.includes('meat') || t.includes('beef') || t.includes('chicken') || t.includes('pork')) return 'meat';
-  if (t.includes('fish') || t.includes('seafood')) return 'seafood';
-  if (t.includes('vegetable') || t.includes('fruit') || t.includes('produce')) return 'produce';
-  if (t.includes('bread') || t.includes('bakery') || t.includes('pastry')) return 'bakery';
-  if (t.includes('frozen')) return 'frozen';
-  if (t.includes('canned') || t.includes('conserve')) return 'canned';
-  if (t.includes('beverage') || t.includes('drink') || t.includes('juice')) return 'beverages';
-  if (t.includes('snack') || t.includes('chip') || t.includes('cookie')) return 'snacks';
-  if (t.includes('grain') || t.includes('cereal') || t.includes('pasta') || t.includes('rice')) return 'grains';
-  return undefined;
+  // Nothing found anywhere — flag it so the UI can show a meaningful message
+  return { ...off, allSourcesFailed: !off.name };
 }
-
 
 // Local alias — ProductAlternative is the same shape, imported for type safety
 type Alternative = ProductAlternative;
-
-const ALT_FIELDS = 'code,product_name,brands,nutriscore_grade,image_front_small_url,categories_tags';
-
-// requiredTag: the exact OFF tag we searched with — post-validates the API actually
-// returned relevant products (guards against broad fallback contamination).
-function parseAlts(products: Record<string, unknown>[], requiredTag?: string): Alternative[] {
-  return products
-    .filter((p) => {
-      const grade = ((p.nutriscore_grade as string) ?? '').toLowerCase();
-      if (!p.product_name || !(grade === 'a' || grade === 'b')) return false;
-      if (requiredTag) {
-        const tags = Array.isArray(p.categories_tags) ? (p.categories_tags as string[]) : [];
-        if (!tags.includes(requiredTag)) return false;
-      }
-      return true;
-    })
-    .slice(0, 3)
-    .map((p) => ({
-      barcode: p.code as string,
-      name: p.product_name as string,
-      brand: p.brands as string | undefined,
-      nutriScore: ((p.nutriscore_grade as string) ?? '').toLowerCase(),
-      imageUri: (p.image_front_small_url as string | undefined) || undefined,
-    }));
-}
-
-// "en:united-kingdom" → "United Kingdom", "en:france" → "France"
-function formatCountryTag(tag: string): string {
-  const name = tag.includes(':') ? tag.slice(tag.indexOf(':') + 1) : tag;
-  return name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
-// Ordered most-specific first — first match in product name + category tags wins.
-// Covers a wide range of food types so the logic works for any scanned product,
-// not just the specific examples we've tested.
-const TYPE_KEYWORDS = [
-  // Sports & nutrition bars — must be early so en:protein-bars beats en:snacks
-  'protein', 'energy', 'whey', 'collagen',
-  // Frozen desserts — before generic "cream" so ice cream beats dairy cream
-  'gelato', 'sorbet', 'ice-cream', 'lolly', 'frozen',
-  // Chocolate / confectionery specifics
-  'chocolate', 'hazelnut', 'caramel', 'nougat', 'praline', 'truffle',
-  // Crisps / chips
-  'crisp', 'chip', 'popcorn', 'pretzel', 'nacho',
-  // Nuts & seeds
-  'almond', 'peanut', 'walnut', 'cashew', 'pistachio', 'pecan', 'sesame',
-  // Specific fruits
-  'strawberry', 'blueberry', 'raspberry', 'blackberry', 'cranberry',
-  'mango', 'coconut', 'banana', 'pineapple', 'watermelon', 'kiwi',
-  'apricot', 'peach', 'cherry', 'plum', 'fig', 'grape',
-  'orange', 'lemon', 'lime', 'grapefruit', 'apple', 'pear',
-  // Meat & fish
-  'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'bacon', 'ham',
-  'tuna', 'salmon', 'cod', 'sardine', 'mackerel', 'shrimp', 'prawn', 'crab',
-  // Dairy specifics
-  'yogurt', 'cheddar', 'mozzarella', 'parmesan', 'brie', 'gouda',
-  'cheese', 'butter', 'cream', 'milk',
-  // Grains & bakery
-  'pasta', 'noodle', 'spaghetti', 'lasagne', 'risotto',
-  'oat', 'wheat', 'rye', 'barley', 'quinoa', 'buckwheat',
-  'bread', 'sourdough', 'baguette', 'croissant', 'brioche',
-  'biscuit', 'cookie', 'cracker', 'wafer', 'waffle', 'pancake',
-  'cereal', 'granola', 'muesli', 'cornflake',
-  'rice', 'corn',
-  // Vegetables & legumes
-  'tomato', 'carrot', 'spinach', 'broccoli', 'cauliflower', 'courgette',
-  'potato', 'mushroom', 'avocado', 'cucumber',
-  'lentil', 'chickpea', 'soy', 'tofu', 'bean', 'pea',
-  // Condiments & flavours
-  'garlic', 'onion', 'ginger', 'pepper', 'chilli', 'paprika', 'cumin',
-  'cinnamon', 'vanilla', 'mint', 'basil', 'oregano', 'thyme', 'rosemary',
-  'honey', 'maple', 'jam', 'marmalade', 'herb', 'seasoning', 'spice',
-  // Drinks
-  'coffee', 'cocoa', 'matcha', 'tea', 'juice', 'smoothie',
-  // Other common descriptors
-  'pizza', 'burger', 'soup', 'curry', 'hummus', 'salsa', 'guacamole',
-  'berry', 'fruit',
-];
-
-const ALTS_DEADLINE_MS = 10_000;
-
-async function fetchAlternatives(
-  offCategories: string[],
-  countryTag: string | undefined,
-): Promise<{ alts: Alternative[]; wasLocal: boolean }> {
-  if (offCategories.length === 0) return { alts: [], wasLocal: false };
-  return Promise.race([
-    doFetchAlternatives(offCategories, countryTag),
-    new Promise<{ alts: Alternative[]; wasLocal: boolean }>((resolve) =>
-      setTimeout(() => resolve({ alts: [], wasLocal: false }), ALTS_DEADLINE_MS)
-    ),
-  ]);
-}
-
-async function doFetchAlternatives(
-  offCategories: string[],
-  countryTag: string | undefined,
-): Promise<{ alts: Alternative[]; wasLocal: boolean }> {
-
-  const BASE = 'https://world.openfoodfacts.org/api/v2/search';
-  const common = `page_size=50&fields=${ALT_FIELDS}&sort_by=popularity`;
-  const country = countryTag ? `&countries_tags=${encodeURIComponent(countryTag)}` : '';
-
-  // Use only tags that contain a TYPE_KEYWORD — these describe the actual food type
-  // (en:chocolates, en:pasta-sauces) rather than broad buckets (en:confectioneries,
-  // en:condiments) that lump unrelated products together.
-  // Walk from most-specific to least-specific so we try the closest match first.
-  const typedTags = [...offCategories]
-    .reverse()
-    .filter(tag => TYPE_KEYWORDS.some(kw => tag.includes(kw)))
-    .slice(0, 3);
-
-  const candidateTags: string[] = typedTags.length > 0
-    ? typedTags
-    : offCategories.slice(-2).reverse();
-
-  // LOCAL PHASE: exhaust all candidate categories with the country filter before
-  // falling back to global results — keeps alternatives as local as possible.
-  const urlEntries: { url: string; isLocal: boolean; tag: string }[] = [];
-  if (country) {
-    for (const tag of candidateTags) {
-      urlEntries.push({
-        url: `${BASE}?categories_tags=${encodeURIComponent(tag)}&${common}${country}`,
-        isLocal: true,
-        tag,
-      });
-    }
-  }
-  // GLOBAL PHASE: only reached if no local results found in any category level.
-  for (const tag of candidateTags) {
-    urlEntries.push({
-      url: `${BASE}?categories_tags=${encodeURIComponent(tag)}&${common}`,
-      isLocal: false,
-      tag,
-    });
-  }
-
-  for (const { url, isLocal, tag } of urlEntries) {
-    try {
-      const res = await fetchWithTimeout(url, 5000);
-      if (!res.ok) continue;
-      const json = await res.json();
-      const alts = parseAlts(json.products ?? [], tag);
-      if (alts.length > 0) return { alts, wasLocal: isLocal };
-    } catch { /* try next */ }
-  }
-
-  return { alts: [], wasLocal: false };
-}
 
 function openShoppingSearch(name: string, brand?: string) {
   const q = [brand, name].filter(Boolean).join(' ');
@@ -382,11 +207,19 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
   const [altsWereLocal, setAltsWereLocal] = useState(false);
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [userCountryTag, setUserCountryTag] = useState<string | undefined>();
+  const [offDetail, setOffDetail] = useState<OFFDetail | null | 'loading'>(null);
 
   // Resolve user's GPS country once on mount — used to find locally-available alternatives
   useEffect(() => {
     resolveUserCountryTag().then(setUserCountryTag);
   }, []);
+
+  // Fetch nutritional detail whenever a scan result arrives
+  useEffect(() => {
+    if (!result?.barcode) { setOffDetail(null); return; }
+    setOffDetail('loading');
+    fetchOFFDetail(result.barcode).then(setOffDetail);
+  }, [result?.barcode]);
 
   useEffect(() => {
     if (!result) { setAlternatives([]); setAltsWereLocal(false); setLoadingAlts(false); return; }
@@ -429,6 +262,7 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
       nutriScore: full.nutriScore,
       novaGroup: full.novaGroup,
       rawScore: full.fatSecretScore,
+      offCategories: full.offCategories,
       scannedAt: new Date().toISOString(),
     });
   }
@@ -441,6 +275,7 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
     setResult(null);
     setAlternatives([]);
     setAltsWereLocal(false);
+    setOffDetail(null);
     scanLock.current = false;
   }
 
@@ -460,9 +295,23 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
     );
   }
 
-  const score = result
+  const baseScore = result
     ? computeScore(result.nutriScore, result.novaGroup, result.fatSecretScore)
     : undefined;
+
+  // Adjust score once additive data is available — harmful additives reduce it,
+  // safe additives barely move it (see computeAdditiveModifier for caps).
+  const { score, scoreAdjustment } = (() => {
+    if (baseScore === undefined || !offDetail || offDetail === 'loading') {
+      return { score: baseScore, scoreAdjustment: 0 };
+    }
+    const { harmful, preservatives, safe } = classifyAdditives(offDetail.additives ?? []);
+    const modifier = computeAdditiveModifier(harmful, preservatives, safe);
+    const adjusted = modifier !== 0
+      ? Math.max(0, Math.min(100, Math.round(baseScore + modifier)))
+      : baseScore;
+    return { score: adjusted, scoreAdjustment: adjusted - baseScore };
+  })();
 
   return (
     <View style={styles.container}>
@@ -499,120 +348,258 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
       {/* Score result card — slides up after scan */}
       {result && !loading && (
         <View style={styles.resultCard}>
-          {/* Score circle */}
-          <View style={styles.scoreRow}>
-            {score !== undefined ? (
-              <View style={[styles.scoreCircle, { borderColor: scoreColor(score) }]}>
-                <Text style={[styles.scoreNumber, { color: scoreColor(score) }]}>{score}</Text>
-                <Text style={[styles.scoreOutOf, { color: scoreColor(score) }]}>/100</Text>
+          <ScrollView
+            style={styles.resultScroll}
+            contentContainerStyle={styles.resultScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
+
+            {/* Score circle + product name */}
+            <View style={styles.scoreRow}>
+              {score !== undefined ? (
+                <View style={[styles.scoreCircle, { borderColor: scoreColor(score) }]}>
+                  <Text style={[styles.scoreNumber, { color: scoreColor(score) }]}>{score}</Text>
+                  <Text style={[styles.scoreOutOf, { color: scoreColor(score) }]}>/100</Text>
+                </View>
+              ) : (
+                <View style={[styles.scoreCircle, { borderColor: '#D1D5DB' }]}>
+                  <Text style={[styles.scoreNumber, { color: '#9CA3AF' }]}>—</Text>
+                </View>
+              )}
+
+              <View style={styles.scoreDetails}>
+                <Text style={styles.productName} numberOfLines={2}>
+                  {result.name ?? `Barcode ${result.barcode}`}
+                </Text>
+                {score !== undefined && (
+                  <Text style={[styles.scoreLabelText, { color: scoreColor(score) }]}>
+                    {scoreLabel(score)}
+                  </Text>
+                )}
+                {scoreAdjustment < 0 && (
+                  <Text style={styles.scoreAdjustNote}>{scoreAdjustment} for additives</Text>
+                )}
+                {score === undefined && !result.allSourcesFailed && (
+                  <Text style={styles.noScoreText}>No score data available</Text>
+                )}
+                {result.allSourcesFailed && (
+                  <Text style={styles.noScoreText}>
+                    Product database temporarily unavailable — you can still add this item manually
+                  </Text>
+                )}
               </View>
-            ) : (
-              <View style={[styles.scoreCircle, { borderColor: '#D1D5DB' }]}>
-                <Text style={[styles.scoreNumber, { color: '#9CA3AF' }]}>—</Text>
+            </View>
+
+            {/* Nutri-Score + NOVA breakdown */}
+            {(result.nutriScore || result.novaGroup) && (
+              <View style={styles.breakdown}>
+                {result.nutriScore && (
+                  <View style={styles.breakdownItem}>
+                    <View style={[styles.gradeBox, { backgroundColor: SCORE_LETTER_COLOR[result.nutriScore] }]}>
+                      <Text style={styles.gradeLetter}>{result.nutriScore.toUpperCase()}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.breakdownLabel}>Nutri-Score</Text>
+                      <Text style={styles.breakdownSub}>Nutritional quality</Text>
+                    </View>
+                  </View>
+                )}
+                {result.novaGroup && (
+                  <View style={styles.breakdownItem}>
+                    <View style={[styles.gradeBox, { backgroundColor: '#6B7280' }]}>
+                      <Text style={styles.gradeLetter}>{result.novaGroup}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.breakdownLabel}>NOVA {result.novaGroup}</Text>
+                      <Text style={styles.breakdownSub}>{NOVA_LABEL[result.novaGroup]}</Text>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
-            <View style={styles.scoreDetails}>
-              <Text style={styles.productName} numberOfLines={2}>
-                {result.name ?? `Barcode ${result.barcode}`}
-              </Text>
-              {score !== undefined && (
-                <Text style={[styles.scoreLabelText, { color: scoreColor(score) }]}>
-                  {scoreLabel(score)}
+            {result?.scoreSource && (
+              <View style={styles.scoreSource}>
+                <Text style={styles.sourceText}>
+                  {result.scoreSource === 'usda'
+                    ? 'Score via USDA FoodData Central'
+                    : result.scoreSource === 'search-a-licious'
+                    ? 'Score via Search-a-licious · Open Food Facts'
+                    : 'Score via Open Food Facts'}
                 </Text>
-              )}
-              {score === undefined && (
-                <Text style={styles.noScoreText}>No score data available</Text>
-              )}
-            </View>
-          </View>
+              </View>
+            )}
 
-          {/* Nutri-Score + NOVA breakdown */}
-          {(result.nutriScore || result.novaGroup) && (
-            <View style={styles.breakdown}>
-              {result.nutriScore && (
-                <View style={styles.breakdownItem}>
-                  <View style={[styles.gradeBox, { backgroundColor: SCORE_LETTER_COLOR[result.nutriScore] }]}>
-                    <Text style={styles.gradeLetter}>{result.nutriScore.toUpperCase()}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.breakdownLabel}>Nutri-Score</Text>
-                    <Text style={styles.breakdownSub}>Nutritional quality</Text>
-                  </View>
+            {/* Nutrition facts — fetched in background after scan */}
+            {offDetail !== null && (
+              <View style={styles.nutritionSection}>
+                <Text style={styles.nutritionTitle}>Nutrition per 100g</Text>
+                {offDetail === 'loading' ? (
+                  <ActivityIndicator size="small" color="#9CA3AF" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                ) : offDetail?.nutrients && Object.values(offDetail.nutrients).some(v => v !== undefined) ? (
+                  <>
+                    <View style={styles.nutritionGrid}>
+                      {offDetail.nutrients.energyKcal !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={styles.nutritionLabel}>⚡ Energy</Text>
+                          <Text style={styles.nutritionValue}>{offDetail.nutrients.energyKcal.toFixed(0)} kcal</Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.fat !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={styles.nutritionLabel}>🧈 Fat</Text>
+                          <Text style={[styles.nutritionValue, { color: trafficColor('fat', offDetail.nutrients.fat) }]}>
+                            {offDetail.nutrients.fat.toFixed(1)}g
+                          </Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.saturatedFat !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={[styles.nutritionLabel, styles.nutritionIndent]}>💧 Sat fat</Text>
+                          <Text style={[styles.nutritionValue, { color: trafficColor('saturatedFat', offDetail.nutrients.saturatedFat) }]}>
+                            {offDetail.nutrients.saturatedFat.toFixed(1)}g
+                          </Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.carbohydrates !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={styles.nutritionLabel}>🌾 Carbs</Text>
+                          <Text style={styles.nutritionValue}>{offDetail.nutrients.carbohydrates.toFixed(1)}g</Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.sugars !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={[styles.nutritionLabel, styles.nutritionIndent]}>🍬 Sugars</Text>
+                          <Text style={[styles.nutritionValue, { color: trafficColor('sugars', offDetail.nutrients.sugars) }]}>
+                            {offDetail.nutrients.sugars.toFixed(1)}g
+                          </Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.proteins !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={styles.nutritionLabel}>💪 Protein</Text>
+                          <Text style={styles.nutritionValue}>{offDetail.nutrients.proteins.toFixed(1)}g</Text>
+                        </View>
+                      )}
+                      {offDetail.nutrients.salt !== undefined && (
+                        <View style={styles.nutritionRow}>
+                          <Text style={styles.nutritionLabel}>🧂 Salt</Text>
+                          <Text style={[styles.nutritionValue, { color: trafficColor('salt', offDetail.nutrients.salt) }]}>
+                            {offDetail.nutrients.salt.toFixed(2)}g
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    {offDetail.additives.length > 0 && (() => {
+                      const { harmful, preservatives, safe } = classifyAdditives(offDetail.additives);
+                      return (
+                        <View style={styles.additivesSection}>
+                          <Text style={styles.nutritionTitle}>Additives</Text>
+                          {harmful.length > 0 && (
+                            <View style={styles.additivesRow}>
+                              <Text style={[styles.additivesLabel, { color: '#DC2626' }]}>☠️ Harmful</Text>
+                              <View style={[styles.additiveBadge, { backgroundColor: '#FEE2E2' }]}>
+                                <Text style={[styles.additiveBadgeText, { color: '#DC2626' }]}>{harmful.length}</Text>
+                              </View>
+                              <Text style={[styles.additivesText, { color: '#DC2626' }]} numberOfLines={2}>
+                                {harmful.join('  ·  ')}
+                              </Text>
+                            </View>
+                          )}
+                          {preservatives.length > 0 && (
+                            <View style={[styles.additivesRow, harmful.length > 0 && { borderTopColor: '#BFDBFE' }]}>
+                              <Text style={[styles.additivesLabel, { color: '#2563EB' }]}>🧪 Preservatives</Text>
+                              <View style={[styles.additiveBadge, { backgroundColor: '#DBEAFE' }]}>
+                                <Text style={[styles.additiveBadgeText, { color: '#2563EB' }]}>{preservatives.length}</Text>
+                              </View>
+                              <Text style={[styles.additivesText, { color: '#2563EB' }]} numberOfLines={2}>
+                                {preservatives.join('  ·  ')}
+                              </Text>
+                            </View>
+                          )}
+                          {safe.length > 0 && (
+                            <View style={[styles.additivesRow, (harmful.length > 0 || preservatives.length > 0) && { borderTopColor: '#FED7AA' }]}>
+                              <Text style={[styles.additivesLabel, { color: '#D97706' }]}>🌱 Generally safe</Text>
+                              <View style={[styles.additiveBadge, { backgroundColor: '#FEF3C7' }]}>
+                                <Text style={[styles.additiveBadgeText, { color: '#D97706' }]}>{safe.length}</Text>
+                              </View>
+                              <Text style={[styles.additivesText, { color: '#D97706' }]} numberOfLines={2}>
+                                {safe.join('  ·  ')}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })()}
+                  </>
+                ) : null}
+              </View>
+            )}
+
+            {/* Healthier alternatives — only for Fair / Poor / Bad scores */}
+            {(score === undefined || score < 60) && (
+              <View style={styles.altsSection}>
+                <View style={styles.altsTitleRow}>
+                  <Text style={styles.altsTitle}>Healthier alternatives</Text>
+                  {altsWereLocal && (userCountryTag ?? result.countryTag) && (
+                    <Text style={styles.altsCountry}>
+                      {`Local to ${formatCountryTag(userCountryTag ?? result.countryTag ?? '')}`}
+                    </Text>
+                  )}
                 </View>
-              )}
-              {result.novaGroup && (
-                <View style={styles.breakdownItem}>
-                  <View style={[styles.gradeBox, { backgroundColor: '#6B7280' }]}>
-                    <Text style={styles.gradeLetter}>{result.novaGroup}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.breakdownLabel}>NOVA {result.novaGroup}</Text>
-                    <Text style={styles.breakdownSub}>{NOVA_LABEL[result.novaGroup]}</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
-          {result?.scoreSource && (
-            <View style={styles.scoreSource}>
-              <Text style={styles.sourceText}>
-                {result.scoreSource === 'usda'
-                  ? 'Score via USDA FoodData Central'
-                  : 'Score via Open Food Facts'}
-              </Text>
-            </View>
-          )}
-
-          {/* Healthier alternatives — only for Fair / Poor / Bad scores */}
-          {(score === undefined || score < 60) && <View style={styles.altsSection}>
-            <View style={styles.altsTitleRow}>
-              <Text style={styles.altsTitle}>Healthier alternatives</Text>
-              {altsWereLocal && (userCountryTag ?? result.countryTag) && (
-                <Text style={styles.altsCountry}>
-                  {`Local to ${formatCountryTag(userCountryTag ?? result.countryTag ?? '')}`}
-                </Text>
-              )}
-            </View>
-            {loadingAlts ? (
-              <ActivityIndicator color={Brand.green} size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
-            ) : alternatives.length > 0 ? (
-              alternatives.map((alt) => (
-                <View key={alt.barcode} style={styles.altRow}>
-                  {alt.imageUri
-                    ? <Image source={{ uri: alt.imageUri }} style={styles.altImage} />
-                    : <View style={[styles.altImagePlaceholder, { backgroundColor: SCORE_LETTER_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
-                        <Text style={styles.altGradeLetter}>{alt.nutriScore.toUpperCase()}</Text>
+                {loadingAlts ? (
+                  <ActivityIndicator color={Brand.green} size="small" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                ) : alternatives.length > 0 ? (
+                  alternatives.map((alt) => {
+                    const altScore = computeScore(alt.nutriScore, alt.novaGroup, undefined);
+                    return (
+                      <View key={alt.barcode} style={styles.altRow}>
+                        {alt.imageUri
+                          ? <Image source={{ uri: alt.imageUri }} style={styles.altImage} />
+                          : <View style={[styles.altImagePlaceholder, { backgroundColor: SCORE_LETTER_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
+                              <Text style={styles.altGradeLetter}>{alt.nutriScore.toUpperCase()}</Text>
+                            </View>
+                        }
+                        <View style={styles.altInfo}>
+                          <Text style={styles.altName} numberOfLines={1}>{alt.name}</Text>
+                          {alt.brand ? <Text style={styles.altBrand} numberOfLines={1}>{alt.brand}</Text> : null}
+                        </View>
+                        <View style={styles.altRating}>
+                          {altScore !== undefined && (
+                            <Text style={[styles.altScoreNum, { color: SCORE_LETTER_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
+                              {altScore}
+                            </Text>
+                          )}
+                          <View style={[styles.altGradeBadge, { backgroundColor: SCORE_LETTER_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
+                            <Text style={styles.altGradeLetter}>{alt.nutriScore.toUpperCase()}</Text>
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.altShopBtn}
+                          onPress={() => openShoppingSearch(alt.name, alt.brand)}
+                          hitSlop={8}>
+                          <IconSymbol name="cart.fill" size={16} color={Brand.green} />
+                        </TouchableOpacity>
                       </View>
-                  }
-                  <View style={styles.altInfo}>
-                    <Text style={styles.altName} numberOfLines={1}>{alt.name}</Text>
-                    {alt.brand ? <Text style={styles.altBrand} numberOfLines={1}>{alt.brand}</Text> : null}
-                  </View>
-                  <View style={[styles.altGradeBadge, { backgroundColor: SCORE_LETTER_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
-                    <Text style={styles.altGradeLetter}>{alt.nutriScore.toUpperCase()}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.altShopBtn}
-                    onPress={() => openShoppingSearch(alt.name, alt.brand)}
-                    hitSlop={8}>
-                    <IconSymbol name="cart.fill" size={16} color={Brand.green} />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.altsNone}>No alternatives found for this product</Text>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.altsNone}>No alternatives found for this product</Text>
+                )}
+              </View>
             )}
-          </View>}
 
-          {/* Actions */}
-          <TouchableOpacity style={styles.addBtn} onPress={handleAddToPantry}>
-            <Text style={styles.addBtnText}>Want it? Start adding to Pantry</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scanAgainBtn} onPress={handleScanAgain}>
-            <Text style={styles.scanAgainText}>Scan Another</Text>
-          </TouchableOpacity>
+          </ScrollView>
+
+          {/* Pinned action buttons */}
+          <View style={styles.resultActions}>
+            <TouchableOpacity style={styles.addBtn} onPress={handleAddToPantry}>
+              <Text style={styles.addBtnText}>Want it? Start adding to Pantry</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.scanAgainBtn} onPress={handleScanAgain}>
+              <Text style={styles.scanAgainText}>Scan Another</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -685,7 +672,7 @@ const styles = StyleSheet.create({
     marginBottom: 60,
   },
   loadingText: { color: '#fff', fontSize: 14 },
-  // Result card
+  // Result card — scrollable with pinned action buttons
   resultCard: {
     position: 'absolute',
     bottom: 0,
@@ -694,10 +681,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    maxHeight: '86%',
+  },
+  resultScroll: { flex: 0 },
+  resultScrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 8,
     gap: 16,
+  },
+  resultActions: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 40,
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
   },
   scoreRow: {
     flexDirection: 'row',
@@ -719,6 +718,7 @@ const styles = StyleSheet.create({
   productName: { fontSize: 16, fontWeight: '700', color: '#111827' },
   scoreLabelText: { fontSize: 14, fontWeight: '700' },
   noScoreText: { fontSize: 13, color: '#9CA3AF' },
+  scoreAdjustNote: { fontSize: 11, color: '#EF8714', fontWeight: '600' },
   breakdown: {
     flexDirection: 'row',
     gap: 12,
@@ -797,6 +797,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+  altRating: { alignItems: 'center', gap: 2, flexShrink: 0 },
+  altScoreNum: { fontSize: 13, fontWeight: '900', lineHeight: 15 },
   altGradeBadge: {
     width: 26,
     height: 26,
@@ -819,6 +821,50 @@ const styles = StyleSheet.create({
   altName: { fontSize: 13, fontWeight: '600', color: '#111827' },
   altBrand: { fontSize: 11, color: '#6B7280', marginTop: 1 },
   altsNone: { fontSize: 12, color: '#6B7280', fontStyle: 'italic' },
+  // Nutrition section
+  nutritionSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+  },
+  additivesSection: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    padding: 12,
+    gap: 6,
+  },
+  nutritionTitle: { fontSize: 12, fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  nutritionGrid: { gap: 0 },
+  nutritionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+  },
+  nutritionLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  nutritionIndent: { paddingLeft: 12, color: '#6B7280' },
+  nutritionValue: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  additivesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+  },
+  additivesLabel: { fontSize: 12, fontWeight: '700', color: '#374151', flexShrink: 0 },
+  additiveBadge: {
+    minWidth: 20, height: 20, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, flexShrink: 0,
+  },
+  additiveBadgeText: { fontSize: 11, fontWeight: '800' },
+  additivesText: { fontSize: 12, color: '#6B7280', flex: 1, lineHeight: 18 },
   permContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16, backgroundColor: '#000' },
   permText: { textAlign: 'center', fontSize: 16, color: '#fff' },
   permBtn: { backgroundColor: Brand.green, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },

@@ -38,32 +38,41 @@ function AlternativesSection({
       <Text style={[altStyles.subheading, { color: colors.subtext }]}>
         Nutri-Score A or B products in the same category
       </Text>
-      {alternatives.map((alt) => (
-        <View key={alt.barcode} style={[altStyles.row, { borderTopColor: '#D1FAE5' }]}>
-          {alt.imageUri ? (
-            <Image source={{ uri: alt.imageUri }} style={altStyles.image} />
-          ) : (
-            <View style={[altStyles.imagePlaceholder, { backgroundColor: NUTRI_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
-              <Text style={altStyles.placeholderLetter}>{alt.nutriScore.toUpperCase()}</Text>
+      {alternatives.map((alt) => {
+        const altScore = computeScore(alt.nutriScore, alt.novaGroup, undefined);
+        const altColor = NUTRI_COLOR[alt.nutriScore] ?? '#1EA54C';
+        return (
+          <View key={alt.barcode} style={[altStyles.row, { borderTopColor: '#D1FAE5' }]}>
+            {alt.imageUri ? (
+              <Image source={{ uri: alt.imageUri }} style={altStyles.image} />
+            ) : (
+              <View style={[altStyles.imagePlaceholder, { backgroundColor: altColor }]}>
+                <Text style={altStyles.placeholderLetter}>{alt.nutriScore.toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={altStyles.info}>
+              <Text style={[altStyles.name, { color: colors.text }]} numberOfLines={2}>{alt.name}</Text>
+              {alt.brand ? (
+                <Text style={[altStyles.brand, { color: colors.subtext }]} numberOfLines={1}>{alt.brand}</Text>
+              ) : null}
             </View>
-          )}
-          <View style={altStyles.info}>
-            <Text style={[altStyles.name, { color: colors.text }]} numberOfLines={2}>{alt.name}</Text>
-            {alt.brand ? (
-              <Text style={[altStyles.brand, { color: colors.subtext }]} numberOfLines={1}>{alt.brand}</Text>
-            ) : null}
+            <View style={altStyles.rating}>
+              {altScore !== undefined && (
+                <Text style={[altStyles.scoreNum, { color: altColor }]}>{altScore}</Text>
+              )}
+              <View style={[altStyles.badge, { backgroundColor: altColor }]}>
+                <Text style={altStyles.badgeLetter}>{alt.nutriScore.toUpperCase()}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={altStyles.shopBtn}
+              onPress={() => openShoppingSearch(alt.name, alt.brand)}
+              hitSlop={8}>
+              <IconSymbol name="cart.fill" size={16} color="#16A34A" />
+            </TouchableOpacity>
           </View>
-          <View style={[altStyles.badge, { backgroundColor: NUTRI_COLOR[alt.nutriScore] ?? '#1EA54C' }]}>
-            <Text style={altStyles.badgeLetter}>{alt.nutriScore.toUpperCase()}</Text>
-          </View>
-          <TouchableOpacity
-            style={altStyles.shopBtn}
-            onPress={() => openShoppingSearch(alt.name, alt.brand)}
-            hitSlop={8}>
-            <IconSymbol name="cart.fill" size={16} color="#16A34A" />
-          </TouchableOpacity>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -106,13 +115,14 @@ const altStyles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   name: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
   brand: { fontSize: 11 },
+  rating: { alignItems: 'center', gap: 2, flexShrink: 0 },
+  scoreNum: { fontSize: 13, fontWeight: '800' },
   badge: {
     width: 28,
     height: 28,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
   badgeLetter: { color: '#fff', fontSize: 13, fontWeight: '900' },
   shopBtn: {

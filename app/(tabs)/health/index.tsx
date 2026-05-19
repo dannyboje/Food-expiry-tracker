@@ -24,7 +24,7 @@ const NOVA_COLOR: Record<number, string> = {
   1: '#1EA54C', 2: '#85BB2F', 3: '#EF8714', 4: '#E63E11',
 };
 
-type Filter = 'all' | 'scored' | 'unscored' | 'a' | 'b' | 'c' | 'd' | 'e';
+type Filter = 'all' | 'a' | 'b' | 'c' | 'd' | 'e';
 
 const GRADE_LABELS: Record<string, string> = {
   a: 'Excellent', b: 'Good', c: 'Fair', d: 'Poor', e: 'Bad',
@@ -64,13 +64,9 @@ function matchesFilter(
   rawScore?: number,
 ): boolean {
   const score = computeScore(nutriScore, novaGroup, rawScore);
-  const hasScore = score !== undefined;
-  if (filter === 'scored') return hasScore;
-  if (filter === 'unscored') return !hasScore;
-  if (['a', 'b', 'c', 'd', 'e'].includes(filter)) {
-    return hasScore && effectiveGrade(score!) === filter;
-  }
-  return true;
+  if (score === undefined) return false; // unrated items never appear
+  if (['a', 'b', 'c', 'd', 'e'].includes(filter)) return effectiveGrade(score) === filter;
+  return true; // 'all' = all rated items
 }
 
 export default function HealthScreen() {
@@ -179,7 +175,10 @@ export default function HealthScreen() {
   function renderScanItem(scan: RecentScan) {
     const composite = computeScore(scan.nutriScore, scan.novaGroup, scan.rawScore);
     return (
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => router.push(`/scan-detail/${encodeURIComponent(scan.barcode)}`)}
+        activeOpacity={0.75}>
         <View style={[styles.cardLeft, styles.scanIcon]}>
           <Text style={styles.emoji}>🔍</Text>
         </View>
@@ -204,7 +203,7 @@ export default function HealthScreen() {
           </Text>
         </View>
         <ScoreBubble composite={composite} colors={colors} />
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -268,20 +267,23 @@ export default function HealthScreen() {
         })}
       </View>
 
-      {/* Filter pills */}
+      {/* Filter pills — grade bands + All */}
       <View style={styles.filters}>
-        {([['all', 'All'], ['scored', 'Rated'], ['unscored', 'Not rated']] as [Filter, string][]).map(
-          ([key, label]) => (
-            <TouchableOpacity
-              key={key}
-              onPress={() => setFilter(key)}
-              style={[styles.pill, filter === key && { backgroundColor: Brand.green }]}>
-              <Text style={[styles.pillText, { color: filter === key ? '#fff' : colors.subtext }]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          )
-        )}
+        {(['all', 'a', 'b', 'c', 'd', 'e'] as Filter[]).map((key) => (
+          <TouchableOpacity
+            key={key}
+            onPress={() => setFilter(key)}
+            style={[
+              styles.pill,
+              filter === key && {
+                backgroundColor: key === 'all' ? Brand.green : (SCORE_COLOR[key] ?? Brand.green),
+              },
+            ]}>
+            <Text style={[styles.pillText, { color: filter === key ? '#fff' : colors.subtext }]}>
+              {key === 'all' ? 'All' : key.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <FlatList
@@ -296,11 +298,9 @@ export default function HealthScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.subtext }]}>
-            {filter === 'scored'
-              ? 'No rated items or scans yet.\nScan a barcode to get a health score.'
-              : ['a', 'b', 'c', 'd', 'e'].includes(filter)
-              ? `No ${GRADE_LABELS[filter].toLowerCase()} (${filter.toUpperCase()}) products found.`
-              : 'No items yet. Scan a barcode to get started.'}
+            {['a', 'b', 'c', 'd', 'e'].includes(filter)
+              ? `No ${GRADE_LABELS[filter].toLowerCase()} (${filter.toUpperCase()}) rated products found.`
+              : 'No rated items yet.\nScan a barcode to get a health score.'}
           </Text>
         }
       />

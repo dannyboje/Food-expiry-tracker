@@ -8,8 +8,9 @@ export interface RecentScan {
   name: string;
   nutriScore?: string;
   novaGroup?: number;
-  rawScore?: number;     // USDA-derived 0–100 score
-  scannedAt: string;    // ISO timestamp
+  rawScore?: number;          // USDA-derived 0–100 score
+  offCategories?: string[];   // OFF categories_tags — used to fetch alternatives
+  scannedAt: string;          // ISO timestamp
 }
 
 export async function saveRecentScan(scan: RecentScan): Promise<void> {

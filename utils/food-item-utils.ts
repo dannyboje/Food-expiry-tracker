@@ -31,7 +31,7 @@ export function shelfLifeDays(purchaseDate: string, expiryDate: string): number 
 
 export function getExpiryStatus(daysLeft: number): ExpiryStatus {
   if (daysLeft < 0) return 'expired';
-  if (daysLeft <= 7) return 'expiring_soon';
+  if (daysLeft <= 3) return 'expiring_soon';
   return 'fresh';
 }
 
@@ -50,7 +50,7 @@ export function formatExpiryLabel(daysLeft: number): string {
   if (daysLeft < 0) return `Expired ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''} ago!`;
   if (daysLeft === 0) return 'Expires today!';
   if (daysLeft === 1) return 'Expires tomorrow!';
-  if (daysLeft <= 7) return `Expiring in ${daysLeft} days!`;
+  if (daysLeft <= 3) return `Expiring in ${daysLeft} days!`;
   return `${daysLeft} days left`;
 }
 

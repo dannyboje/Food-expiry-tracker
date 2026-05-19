@@ -67,6 +67,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="cart" color={color} />,
         }}
       />
+      <Tabs.Screen name="donate" options={{ href: null }} />
       {/* Hidden tabs — content moved into Household screen */}
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />

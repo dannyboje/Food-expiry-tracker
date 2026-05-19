@@ -22,6 +22,7 @@ export interface ProductAlternative {
   name: string;
   brand?: string;
   nutriScore: string;   // 'a' or 'b'
+  novaGroup?: number;
   imageUri?: string;
 }
 
