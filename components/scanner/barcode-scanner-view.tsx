@@ -35,6 +35,31 @@ interface ScanResult {
   alternatives?: ProductAlternative[];
   /** True when all upstream sources returned no data (e.g. OFf server outage) */
   allSourcesFailed?: boolean;
+  /** True when the product is non-food (bags, packaging, household items, etc.) */
+  isNonFood?: boolean;
+}
+
+// Category tags that identify non-food / non-drink products in Open Food Facts
+const NON_FOOD_TAGS = new Set([
+  'en:non-food-products', 'en:non-food',
+  'en:bags', 'en:reusable-bags', 'en:carrier-bags', 'en:plastic-bags',
+  'en:shopping-bags', 'en:tote-bags',
+  'en:packaging', 'en:packaging-materials',
+  'en:household-products', 'en:cleaning-products', 'en:cleaning',
+  'en:cosmetics', 'en:beauty-products', 'en:personal-care',
+  'en:textiles', 'en:clothing', 'en:paper-products',
+]);
+
+function detectNonFood(tags: string[]): boolean {
+  if (tags.some(t => NON_FOOD_TAGS.has(t))) return true;
+  const joined = tags.join(' ');
+  return (
+    joined.includes('non-food') ||
+    joined.includes(':bags') ||
+    joined.includes('packaging-material') ||
+    joined.includes('household-product') ||
+    joined.includes('cleaning-product')
+  );
 }
 
 interface Props {
@@ -90,14 +115,16 @@ async function lookupOnOpenFoodFacts(barcode: string): Promise<Omit<ScanResult, 
       const novaGroup = p.nova_group ? Number(p.nova_group) : undefined;
       const validNutriScore = ['a', 'b', 'c', 'd', 'e'].includes(nutriScore ?? '') ? nutriScore : undefined;
       const validNova = novaGroup && novaGroup >= 1 && novaGroup <= 4 ? novaGroup : undefined;
+      const isNonFood = detectNonFood(categoriesTags);
       return {
         name: [name, brand].filter(Boolean).join(' — ') || undefined,
         category: mapCategory(categoriesTags[0] ?? ''),
         offCategories: categoriesTags,
         countryTag: countriesTags[0] ?? undefined,
-        nutriScore: validNutriScore,
-        novaGroup: validNova,
-        scoreSource: (validNutriScore || validNova) ? 'openfoodfacts' : undefined,
+        nutriScore: isNonFood ? undefined : validNutriScore,
+        novaGroup: isNonFood ? undefined : validNova,
+        scoreSource: (!isNonFood && (validNutriScore || validNova)) ? 'openfoodfacts' : undefined,
+        isNonFood,
       };
     }
   } catch {
@@ -214,15 +241,15 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
     resolveUserCountryTag().then(setUserCountryTag);
   }, []);
 
-  // Fetch nutritional detail whenever a scan result arrives
+  // Fetch nutritional detail whenever a scan result arrives — skip for non-food items
   useEffect(() => {
-    if (!result?.barcode) { setOffDetail(null); return; }
+    if (!result?.barcode || result.isNonFood) { setOffDetail(null); return; }
     setOffDetail('loading');
     fetchOFFDetail(result.barcode).then(setOffDetail);
-  }, [result?.barcode]);
+  }, [result?.barcode, result?.isNonFood]);
 
   useEffect(() => {
-    if (!result) { setAlternatives([]); setAltsWereLocal(false); setLoadingAlts(false); return; }
+    if (!result || result.isNonFood) { setAlternatives([]); setAltsWereLocal(false); setLoadingAlts(false); return; }
 
     // Only suggest alternatives for Fair and below (score < 60).
     // Good / Excellent products don't need a healthier alternative.
@@ -371,15 +398,20 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
                 <Text style={styles.productName} numberOfLines={2}>
                   {result.name ?? `Barcode ${result.barcode}`}
                 </Text>
-                {score !== undefined && (
+                {score !== undefined && !result.isNonFood && (
                   <Text style={[styles.scoreLabelText, { color: scoreColor(score) }]}>
                     {scoreLabel(score)}
                   </Text>
                 )}
-                {scoreAdjustment < 0 && (
+                {scoreAdjustment < 0 && !result.isNonFood && (
                   <Text style={styles.scoreAdjustNote}>{scoreAdjustment} for additives</Text>
                 )}
-                {score === undefined && !result.allSourcesFailed && (
+                {result.isNonFood && (
+                  <Text style={styles.noScoreText}>
+                    Fresh Ahead doesn't rate these types of products
+                  </Text>
+                )}
+                {!result.isNonFood && score === undefined && !result.allSourcesFailed && (
                   <Text style={styles.noScoreText}>No score data available</Text>
                 )}
                 {result.allSourcesFailed && (
@@ -430,8 +462,8 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
               </View>
             )}
 
-            {/* Nutrition facts — fetched in background after scan */}
-            {offDetail !== null && (
+            {/* Nutrition facts — fetched in background after scan; hidden for non-food items */}
+            {!result?.isNonFood && offDetail !== null && (
               <View style={styles.nutritionSection}>
                 <Text style={styles.nutritionTitle}>Nutrition per 100g</Text>
                 {offDetail === 'loading' ? (
@@ -536,8 +568,8 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
               </View>
             )}
 
-            {/* Healthier alternatives — only for Fair / Poor / Bad scores */}
-            {(score === undefined || score < 60) && (
+            {/* Healthier alternatives — only for Fair / Poor / Bad food scores */}
+            {!result?.isNonFood && (score === undefined || score < 60) && (
               <View style={styles.altsSection}>
                 <View style={styles.altsTitleRow}>
                   <Text style={styles.altsTitle}>Healthier alternatives</Text>
