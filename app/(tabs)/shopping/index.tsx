@@ -2,11 +2,12 @@ import {
   Alert, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import SiriShortcuts from '@freshahead/siri-shortcuts';
 import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -47,6 +48,7 @@ export default function ShoppingScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const tabBarHeight = useBottomTabBarHeight();
+  const { name: siriName, from } = useLocalSearchParams<{ name?: string; from?: string }>();
 
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
@@ -78,6 +80,24 @@ export default function ShoppingScreen() {
       getFavorites().then(setFavorites).catch(() => {});
     }, [])
   );
+
+  // ── Siri deep link: open from "Add to shopping list" shortcut ────────────
+  useEffect(() => {
+    if (from !== 'siri' || !siriName) return;
+    // Wait for lists to load, then activate the add-input on the first list
+    // with the item name pre-filled so the user just taps Add.
+    const timer = setTimeout(() => {
+      setLists((current) => {
+        if (current.length === 0) return current;
+        setAddInput(siriName);
+        setAddingToListId(current[0].id);
+        setTimeout(() => addInputRef.current?.focus(), 100);
+        return current;
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, siriName]);
 
   // ── Persist helpers ──────────────────────────────────────────────────────
 
@@ -155,6 +175,7 @@ export default function ShoppingScreen() {
     };
     updateList(listId, (items) => [...items, newItem]);
     setAddInput('');
+    SiriShortcuts.donateShortcut('shopping', name).catch(() => {});
   }
 
   function toggleItem(listId: string, itemId: string) {

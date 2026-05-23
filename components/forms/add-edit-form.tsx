@@ -13,6 +13,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import SiriShortcuts from '@freshahead/siri-shortcuts';
+// Safe lazy require — Voice needs a native dev build; Expo Go will skip it
+let Voice: typeof import('@react-native-community/voice').default | null = null;
+try { Voice = require('@react-native-community/voice').default; } catch {}
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
@@ -29,7 +33,6 @@ import { consumeScanResult } from '@/utils/scan-result-store';
 import { loadHousehold } from '@/utils/household-storage';
 import { computeScore, scoreColor, scoreLabel } from '@/utils/food-score';
 import { resolvePhotoUri } from '@/utils/photo-storage';
-import { searchProducts, mapCategory, type SALProduct } from '@/utils/search-a-licious';
 import type { FoodItem, ProductAlternative, QuantityUnit, StorageLocation } from '@/types/food-item';
 
 const NUTRI_COLOR: Record<string, string> = {
@@ -39,6 +42,15 @@ const NUTRI_COLOR: Record<string, string> = {
 interface Props {
   initialItem?: FoodItem;
   prefill?: Partial<FoodItem> & { barcode?: string; expiryHint?: string };
+}
+
+interface HistoryMatch {
+  name: string;
+  category: string;
+  nutriScore?: string;
+  novaGroup?: number;
+  rawScore?: number;
+  barcode?: string;
 }
 
 function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -85,11 +97,11 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [alternatives, setAlternatives] = useState<ProductAlternative[]>(base?.alternatives ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [suggestions, setSuggestions] = useState<SALProduct[]>([]);
-  const [searchingName, setSearchingName] = useState(false);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [historySuggestions, setHistorySuggestions] = useState<HistoryMatch[]>([]);
+  const [isListening, setIsListening] = useState(false);
 
-  useEffect(() => () => clearTimeout(searchTimer.current), []);
+  // Keep a stable ref to handleNameChange so the Voice callback never goes stale
+  const handleNameChangeRef = useRef<(text: string) => void>(() => {});
 
   useFocusEffect(
     useCallback(() => {
@@ -141,26 +153,75 @@ export function AddEditForm({ initialItem, prefill }: Props) {
 
   function handleNameChange(text: string) {
     setName(text);
-    setSuggestions([]);
-    clearTimeout(searchTimer.current);
-    if (text.trim().length < 3) return;
-    setSearchingName(true);
-    searchTimer.current = setTimeout(async () => {
-      const results = await searchProducts(text.trim(), 5);
-      setSuggestions(results);
-      setSearchingName(false);
-    }, 400);
+    setHistorySuggestions([]);
+
+    const q = text.trim().toLowerCase();
+    if (!q) return;
+
+    const seen = new Set<string>();
+    const history: HistoryMatch[] = [];
+    for (const item of enrichedItems) {
+      const key = item.name.toLowerCase();
+      if (item.id === initialItem?.id) continue;
+      if (seen.has(key)) continue;
+      if (!key.includes(q)) continue;
+      seen.add(key);
+      history.push({
+        name: item.name,
+        category: item.category,
+        nutriScore: item.nutriScore,
+        novaGroup: item.novaGroup,
+        rawScore: item.rawScore,
+        barcode: item.barcode,
+      });
+      if (history.length === 5) break;
+    }
+    setHistorySuggestions(history);
   }
 
-  function applySuggestion(product: SALProduct) {
-    setName(product.name);
-    setBarcode(product.barcode);
-    if (product.nutriScore) setNutriScore(product.nutriScore);
-    if (product.novaGroup) setNovaGroup(product.novaGroup);
-    const firstTag = product.offCategories[0];
-    if (firstTag) setCategory(mapCategory(firstTag) ?? 'other');
-    setSuggestions([]);
-    setSearchingName(false);
+  // Keep the ref in sync so the Voice callback below never captures a stale closure
+  handleNameChangeRef.current = handleNameChange;
+
+  useEffect(() => {
+    if (!Voice) return;
+    Voice.onSpeechResults = (e) => {
+      const result = e.value?.[0];
+      if (result) handleNameChangeRef.current(result);
+      setIsListening(false);
+    };
+    Voice.onSpeechError = () => setIsListening(false);
+    Voice.onSpeechEnd = () => setIsListening(false);
+    return () => {
+      Voice?.destroy().then(Voice!.removeAllListeners).catch(() => {});
+    };
+  }, []);
+
+  async function toggleVoice() {
+    if (!Voice) {
+      Alert.alert('Voice Input', 'Voice input requires a development build of the app. It is not available in Expo Go.');
+      return;
+    }
+    if (isListening) {
+      try { await Voice.stop(); } catch {}
+      setIsListening(false);
+    } else {
+      try {
+        await Voice.start('en-US');
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
+    }
+  }
+
+  function applyHistorySuggestion(match: HistoryMatch) {
+    setName(match.name);
+    setCategory(match.category);
+    if (match.nutriScore) setNutriScore(match.nutriScore);
+    if (match.novaGroup)  setNovaGroup(match.novaGroup);
+    if (match.rawScore)   setRawScore(match.rawScore);
+    if (match.barcode)    setBarcode(match.barcode);
+    setHistorySuggestions([]);
   }
 
   async function handleSave() {
@@ -211,6 +272,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         await updateItem(item);
       } else {
         await addItem(item);
+        // Donate shortcut so Siri learns "Add [name] to pantry"
+        SiriShortcuts.donateShortcut('pantry', item.name).catch(() => {});
       }
 
       if (router.canDismiss()) {
@@ -277,13 +340,31 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 ]}
                 value={name}
                 onChangeText={handleNameChange}
-                onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+                onBlur={() => setTimeout(() => setHistorySuggestions([]), 150)}
                 placeholder="e.g. Banana"
                 placeholderTextColor={colors.subtext}
                 returnKeyType="done"
                 multiline
                 blurOnSubmit
               />
+              <TouchableOpacity
+                style={[
+                  styles.micBtn,
+                  isListening
+                    ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
+                    : { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+                onPress={toggleVoice}
+                activeOpacity={0.7}>
+                <IconSymbol
+                  name={isListening ? 'mic.fill' : 'mic'}
+                  size={24}
+                  color={isListening ? '#EF4444' : colors.subtext}
+                />
+                <Text style={[styles.scanBtnText, { color: isListening ? '#EF4444' : colors.subtext }]}>
+                  {isListening ? 'Stop' : 'Voice'}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.scanBtn, { borderColor: Brand.green, backgroundColor: colors.card }]}
                 onPress={openBarcodeScanner}>
@@ -292,37 +373,35 @@ export function AddEditForm({ initialItem, prefill }: Props) {
               </TouchableOpacity>
             </View>
 
-            {searchingName && (
-              <ActivityIndicator size="small" color={Brand.green} style={styles.searchSpinner} />
-            )}
-
-            {suggestions.length > 0 && (
+            {historySuggestions.length > 0 && (
               <View style={[styles.suggestions, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                {suggestions.map((s) => (
+                {historySuggestions.map((h, i) => (
                   <TouchableOpacity
-                    key={s.barcode}
-                    style={[styles.suggestionRow, { borderBottomColor: colors.border }]}
-                    onPress={() => applySuggestion(s)}
+                    key={`history-${h.name}`}
+                    style={[
+                      styles.suggestionRow,
+                      { borderBottomColor: colors.border },
+                      i === historySuggestions.length - 1 && { borderBottomWidth: 0 },
+                    ]}
+                    onPress={() => applyHistorySuggestion(h)}
                     activeOpacity={0.7}>
                     <View style={styles.suggestionInfo}>
                       <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>
-                        {s.name}
+                        {h.name}
                       </Text>
-                      {s.brand ? (
-                        <Text style={[styles.suggestionBrand, { color: colors.subtext }]} numberOfLines={1}>
-                          {s.brand}
-                        </Text>
-                      ) : null}
+                      <Text style={[styles.suggestionBrand, { color: colors.subtext }]} numberOfLines={1}>
+                        {h.category.charAt(0).toUpperCase() + h.category.slice(1)}
+                      </Text>
                     </View>
                     <View style={styles.suggestionBadges}>
-                      {s.nutriScore ? (
-                        <View style={[styles.nutriBadge, { backgroundColor: NUTRI_COLOR[s.nutriScore] }]}>
-                          <Text style={styles.nutriBadgeText}>{s.nutriScore.toUpperCase()}</Text>
+                      {h.nutriScore ? (
+                        <View style={[styles.nutriBadge, { backgroundColor: NUTRI_COLOR[h.nutriScore] }]}>
+                          <Text style={styles.nutriBadgeText}>{h.nutriScore.toUpperCase()}</Text>
                         </View>
                       ) : null}
-                      {s.novaGroup ? (
+                      {h.novaGroup ? (
                         <Text style={[styles.novaBadgeText, { color: colors.subtext }]}>
-                          NOVA {s.novaGroup}
+                          NOVA {h.novaGroup}
                         </Text>
                       ) : null}
                     </View>
@@ -480,6 +559,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     textAlignVertical: 'top',
+  },
+  micBtn: {
+    width: 60,
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
   scanBtn: {
     width: 76,

@@ -16,6 +16,8 @@
         "NSPhotoLibraryUsageDescription": "Used to select photos of expiry dates and nutrition labels from your library.",
         "NSUserNotificationsUsageDescription": "Used to alert you before food items expire.",
         "NSLocationWhenInUseUsageDescription": "Used to find healthier product alternatives available in your country.",
+        "NSMicrophoneUsageDescription": "Used to let you speak the product name instead of typing it.",
+        "NSSpeechRecognitionUsageDescription": "Used to convert your voice into the product name when adding items.",
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["https", "http"]
       }
@@ -25,7 +27,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
@@ -76,7 +79,8 @@
           "locationWhenInUsePermission": "Used to find healthier product alternatives available in your country."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "./plugins/withSiriShortcuts.js"
     ],
     "experiments": {
       "typedRoutes": true,

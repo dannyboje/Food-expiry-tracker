@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import KVStore from 'expo-sqlite/kv-store';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { seedDemoData } from '@/utils/seed-demo-data';
 import {
   type AlertThresholds,
   DEFAULT_THRESHOLDS,
@@ -73,6 +74,7 @@ export default function SettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [thresholds, setThresholds] = useState<AlertThresholds>(DEFAULT_THRESHOLDS);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     KVStore.getItem(NOTIF_PREF_KEY)
@@ -85,6 +87,31 @@ export default function SettingsScreen() {
     setNotificationsEnabled(value);
     await KVStore.setItem(NOTIF_PREF_KEY, String(value));
     if (value) await requestNotificationPermissions();
+  }
+
+  function handleLoadDemo() {
+    Alert.alert(
+      'Load Demo Data?',
+      'This will replace all your current pantry items, shopping lists, and scan history with sample data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Load Demo',
+          style: 'destructive',
+          onPress: async () => {
+            setSeeding(true);
+            try {
+              await seedDemoData();
+              Alert.alert('Done', 'Demo data loaded. Restart the app or navigate away and back to see the changes.');
+            } catch {
+              Alert.alert('Error', 'Something went wrong loading demo data.');
+            } finally {
+              setSeeding(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function updateTier(key: keyof AlertThresholds, value: number) {
@@ -154,6 +181,16 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {/* Demo data */}
+        <Text style={[styles.sectionHeader, { color: colors.subtext }]}>DEVELOPER</Text>
+        <TouchableOpacity
+          style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
+          onPress={handleLoadDemo}
+          disabled={seeding}
+          activeOpacity={0.8}>
+          <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
+        </TouchableOpacity>
+
         {/* About */}
         <Text style={[styles.sectionHeader, { color: colors.subtext }]}>ABOUT</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -201,4 +238,10 @@ const styles = StyleSheet.create({
   tierShelf: { fontSize: 12, fontWeight: '500' },
   tierRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tierLabel: { fontSize: 13, fontWeight: '500' },
+  demoBtn: {
+    marginHorizontal: 16, borderRadius: 12, borderWidth: 1.5,
+    borderColor: Brand.green, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  demoBtnText: { fontSize: 15, fontWeight: '700', color: Brand.green },
 });

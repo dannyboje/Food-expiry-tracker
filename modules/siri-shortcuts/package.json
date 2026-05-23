@@ -1,0 +1,8 @@
+{
+  "name": "@freshahead/siri-shortcuts",
+  "version": "1.0.0",
+  "description": "Local Expo module — Siri shortcut donation for Fresh Ahead",
+  "main": "index.ts",
+  "keywords": ["expo", "siri", "shortcuts"],
+  "license": "MIT"
+}

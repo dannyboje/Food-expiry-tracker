@@ -9,6 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import KVStore from 'expo-sqlite/kv-store';
 import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
+import { seedDemoData } from '@/utils/seed-demo-data';
 import { DIGEST_ENABLED_KEY, DIGEST_HOUR_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
 import { usePantry } from '@/hooks/use-pantry';
 
@@ -110,6 +111,7 @@ export default function HouseholdScreen() {
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestHour, setDigestHour] = useState(9);
   const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
+  const [seeding, setSeeding] = useState(false);
   const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
 
   useEffect(() => {
@@ -331,6 +333,31 @@ export default function HouseholdScreen() {
           </View>
         </ScrollView>
       </View>
+    );
+  }
+
+  function handleLoadDemo() {
+    Alert.alert(
+      'Load Demo Data?',
+      'This replaces all pantry items, shopping lists, and scan history with sample data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Load Demo',
+          style: 'destructive',
+          onPress: async () => {
+            setSeeding(true);
+            try {
+              await seedDemoData();
+              Alert.alert('Done', 'Demo data loaded. Navigate away and back to see the changes.');
+            } catch {
+              Alert.alert('Error', 'Something went wrong loading demo data.');
+            } finally {
+              setSeeding(false);
+            }
+          },
+        },
+      ]
     );
   }
 
@@ -642,6 +669,46 @@ export default function HouseholdScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Siri Shortcuts */}
+        <Text style={[styles.settingsSub, { color: colors.subtext }]}>SIRI SHORTCUTS</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.siriRow}>
+            <Text style={styles.siriIcon}>🎙️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Add to Pantry</Text>
+              <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>
+                "Hey Siri, Add Milk to pantry"
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.siriDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.siriRow}>
+            <Text style={styles.siriIcon}>🎙️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Add to Shopping</Text>
+              <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>
+                "Hey Siri, Add Eggs to shopping list"
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.siriDivider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.siriHint, { color: colors.subtext }]}>
+            Siri shortcuts are learned automatically as you add items. To set a custom phrase, go to{' '}
+            <Text style={{ color: '#10B981', fontWeight: '600' }}>Settings → Siri &amp; Search</Text>{' '}
+            on your iPhone and look for Fresh Ahead.
+          </Text>
+        </View>
+
+        {/* Demo */}
+        <Text style={[styles.settingsSub, { color: colors.subtext }]}>DEVELOPER</Text>
+        <TouchableOpacity
+          style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
+          onPress={handleLoadDemo}
+          disabled={seeding}
+          activeOpacity={0.8}>
+          <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
+        </TouchableOpacity>
+
         {/* About */}
         <Text style={[styles.settingsSub, { color: colors.subtext }]}>ABOUT</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -811,4 +878,13 @@ const styles = StyleSheet.create({
   dangerSub: { fontSize: 12, marginTop: 2 },
   hourRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hourValue: { fontSize: 14, fontWeight: '700', minWidth: 52, textAlign: 'center' },
+  demoBtn: {
+    marginHorizontal: 16, borderRadius: 12, borderWidth: 1.5,
+    borderColor: Brand.green, paddingVertical: 14, alignItems: 'center',
+  },
+  demoBtnText: { fontSize: 15, fontWeight: '700', color: Brand.green },
+  siriRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  siriIcon: { fontSize: 22, width: 28, textAlign: 'center' },
+  siriDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14 },
+  siriHint: { fontSize: 12, lineHeight: 18, padding: 14, paddingTop: 10 },
 });

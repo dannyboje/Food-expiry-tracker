@@ -21,7 +21,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Four storage locations** — Pantry, Fridge, Freezer, and Meds (medicine cabinet). Switch between them with one tap when adding or editing an item.
 
 ### Know what's expiring
-- **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance. The item detail view shows "Expiring" when an item is approaching its date and "Expired" once it has passed.
+- **Color-coded status** — every item shows how many days remain: green (fresh), orange (expiring soon within 3 days), red (expired). A matching colored stripe on the left edge of each card makes status scannable at a glance. The item detail view shows "Expiring" when an item is approaching its date and "Expired" once it has passed.
 - **Sorted by urgency** — items closest to expiry appear at the top of the list automatically.
 - **Smart notifications** — get a push notification before something expires. The alert window adapts to shelf life: 1 day ahead for very short-lived items, up to 60 days ahead for long-shelf-life products. All thresholds are adjustable in Settings.
 - **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they are automatically removed.
@@ -33,15 +33,14 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Dismiss per item** — review each recall alert and dismiss them one by one, or clear them all at once.
 
 ### Shopping list
-- **Auto-restock** — items are automatically added to your shopping list when they:
-  - Are auto-removed after the 20-day expired grace period
-  - Are manually deleted from the pantry
-  - Are marked as **used** (finished)
-  - Are marked as **wasted** (thrown away or expired)
-- **Manual additions** — type anything into the list, add it with one tap, and check it off as you shop.
+- **Multiple lists** — create as many named shopping lists as you like. Tap the pencil icon to rename any list inline. Delete a list with a confirmation step.
+- **Collapse / expand** — tap the +/− button beside a list name to fold it away when you don't need it.
+- **Favourites** — star any item (☆/★) to add it to a persistent Favourites section that survives list deletion. Tap + on a favourite to add it to whichever list you choose. Un-favouriting asks for confirmation so you don't lose items by accident.
+- **Auto-restock** — items are automatically added to the default list when they are auto-removed after the expired grace period, manually deleted from the pantry, or marked as used or wasted.
+- **Nutritional info preserved** — pantry items added to the shopping list carry their Nutri-Score, NOVA group, and composite health score so you can see at a glance how healthy the restock is.
+- **Manual additions** — type anything into any list, add it with one tap, and check it off as you shop.
 - **Edit on the fly** — tap the pencil icon to rename any item inline. Tap the tick to save or the X to cancel; the keyboard is automatically scrolled clear of the item being edited.
-- **Clear checked** — remove everything you've already bought with one tap.
-- **Clear all** — remove the entire list at once with a single confirmation tap.
+- **Clear** — a "Clear" button on each list lets you remove only checked items or wipe the whole list, with a confirmation step for the latter.
 - **Restock badge** — items auto-added from your pantry are labelled so you always know why they're there.
 
 ### Food waste tracker
@@ -58,16 +57,19 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Coming soon: shared household** — real-time pantry sharing across multiple devices is on the roadmap. For now, all data lives on your device, so household members are tracked locally for attribution purposes.
 
 ### Health & Nutrition
-- **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance.
+- **Nutri-Score display** — items scanned from Open Food Facts show their A–E nutritional grade at a glance, with colour-coded emoji labels on each nutrient row (⚡ Energy, 🧈 Fat, 🌾 Carbs, 💪 Protein, 🧂 Salt, and more).
 - **NOVA group** — see the food processing level (1 = unprocessed, 4 = ultra-processed) for every scanned product.
-- **Health score** — a composite score (0–100) is calculated from Nutri-Score and NOVA group and shown on each item card and detail view.
+- **Health score** — a composite score (0–100) is calculated from Nutri-Score and NOVA group and shown on each item card, detail view, and alongside each healthier alternative so you can compare at a glance.
+- **Additive breakdown** — additives are classified into three groups with colour-coded labels: ☠️ Harmful (red), 🧪 Preservatives (blue), and 🌱 Generally safe (orange).
 - **Healthier alternatives** — when you scan a product rated Fair, Poor, or Bad (score below 60), the app instantly suggests up to 3 healthier alternatives (Nutri-Score A or B) in the same food category. Alternatives are prioritised by your GPS location so they're products available to buy locally. Tap the cart icon next to any alternative to search for it on Google Shopping. The alternatives are saved with the pantry item and displayed on the item detail page, just above the full nutrition panel.
+- **Scan history detail** — tap any recently scanned product in the Health tab to open a full detail view showing its health score, healthier alternatives, and complete nutrition and additive panel — identical to what you see straight after scanning.
 - **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
 - **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 
 ### Settings & customisation
 - **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
 - **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
+- **Newsletter opt-in** — on first launch the app offers to keep you updated on new features. Your email address is stored only on your device and is never transmitted to any server.
 
 ---
 

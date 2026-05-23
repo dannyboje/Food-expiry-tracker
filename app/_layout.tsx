@@ -13,6 +13,7 @@ import { requestNotificationPermissions } from '@/utils/notification-scheduler';
 import { scheduleDailyRecallCheck } from '@/utils/recall-scheduler';
 import { EmailCaptureModal } from '@/components/onboarding/EmailCaptureModal';
 import { hasShownEmailPrompt } from '@/utils/email-capture';
+import SiriShortcuts from '@freshahead/siri-shortcuts';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -25,6 +26,9 @@ export default function RootLayout() {
   useEffect(() => {
     initDatabase().catch(console.error);
     hasShownEmailPrompt().then((shown) => { if (!shown) setShowEmailCapture(true); }).catch(console.error);
+    // Register generic Siri shortcuts so they appear in Settings › Siri & Search.
+    // No-op on Android or in Expo Go.
+    if (Platform.OS === 'ios') SiriShortcuts.suggestShortcuts().catch(() => {});
 
     // Android requires an explicit notification channel before any scheduling.
     if (Platform.OS === 'android') {
