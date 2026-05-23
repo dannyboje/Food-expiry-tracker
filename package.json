@@ -14,7 +14,6 @@
     "@expo/vector-icons": "^15.0.3",
     "@freshahead/siri-shortcuts": "file:./modules/siri-shortcuts",
     "@react-native-community/datetimepicker": "8.4.4",
-    "@react-native-community/voice": "^1.1.9",
     "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@react-native-picker/picker": "2.11.1",
     "@react-navigation/bottom-tabs": "^7.4.0",

@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import SiriShortcuts from '@freshahead/siri-shortcuts';
-// Safe lazy require — Voice needs a native dev build; Expo Go will skip it
-let Voice: typeof import('@react-native-community/voice').default | null = null;
-try { Voice = require('@react-native-community/voice').default; } catch {}
-import { useCallback, useEffect, useRef, useState } from 'react';
+// Voice recognition placeholder — @react-native-community/voice is incompatible
+// with React Native new architecture. Stub keeps the UI but disables the feature.
+const Voice: null = null;
+import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
 import { DatePickerField } from './date-picker-field';
@@ -98,10 +98,6 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [historySuggestions, setHistorySuggestions] = useState<HistoryMatch[]>([]);
-  const [isListening, setIsListening] = useState(false);
-
-  // Keep a stable ref to handleNameChange so the Voice callback never goes stale
-  const handleNameChangeRef = useRef<(text: string) => void>(() => {});
 
   useFocusEffect(
     useCallback(() => {
@@ -179,39 +175,8 @@ export function AddEditForm({ initialItem, prefill }: Props) {
     setHistorySuggestions(history);
   }
 
-  // Keep the ref in sync so the Voice callback below never captures a stale closure
-  handleNameChangeRef.current = handleNameChange;
-
-  useEffect(() => {
-    if (!Voice) return;
-    Voice.onSpeechResults = (e) => {
-      const result = e.value?.[0];
-      if (result) handleNameChangeRef.current(result);
-      setIsListening(false);
-    };
-    Voice.onSpeechError = () => setIsListening(false);
-    Voice.onSpeechEnd = () => setIsListening(false);
-    return () => {
-      Voice?.destroy().then(Voice!.removeAllListeners).catch(() => {});
-    };
-  }, []);
-
-  async function toggleVoice() {
-    if (!Voice) {
-      Alert.alert('Voice Input', 'Voice input requires a development build of the app. It is not available in Expo Go.');
-      return;
-    }
-    if (isListening) {
-      try { await Voice.stop(); } catch {}
-      setIsListening(false);
-    } else {
-      try {
-        await Voice.start('en-US');
-        setIsListening(true);
-      } catch {
-        setIsListening(false);
-      }
-    }
+function toggleVoice() {
+    Alert.alert('Voice Input', 'Voice input is coming in a future update.');
   }
 
   function applyHistorySuggestion(match: HistoryMatch) {
@@ -348,22 +313,11 @@ export function AddEditForm({ initialItem, prefill }: Props) {
                 blurOnSubmit
               />
               <TouchableOpacity
-                style={[
-                  styles.micBtn,
-                  isListening
-                    ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
-                    : { borderColor: colors.border, backgroundColor: colors.card },
-                ]}
+                style={[styles.micBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
                 onPress={toggleVoice}
                 activeOpacity={0.7}>
-                <IconSymbol
-                  name={isListening ? 'mic.fill' : 'mic'}
-                  size={24}
-                  color={isListening ? '#EF4444' : colors.subtext}
-                />
-                <Text style={[styles.scanBtnText, { color: isListening ? '#EF4444' : colors.subtext }]}>
-                  {isListening ? 'Stop' : 'Voice'}
-                </Text>
+                <IconSymbol name="mic" size={24} color={colors.subtext} />
+                <Text style={[styles.scanBtnText, { color: colors.subtext }]}>Voice</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.scanBtn, { borderColor: Brand.green, backgroundColor: colors.card }]}
