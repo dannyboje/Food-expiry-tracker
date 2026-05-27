@@ -336,9 +336,14 @@
     <p class="fa-sub">Fresh Ahead is built around one goal — helping you use food before it goes to waste.</p>
     <div class="features-grid">
       <div class="feature-card">
+        <span class="feature-icon">🎤</span>
+        <h3>Voice Input</h3>
+        <p>Tap the mic button on the product name field and speak — Fresh Ahead transcribes your words instantly and fills in the name for you. No typing, no fuss.</p>
+      </div>
+      <div class="feature-card">
         <span class="feature-icon">🔍</span>
         <h3>Barcode Scanner</h3>
-        <p>Scan any product barcode to instantly add it with the correct name, category, and health score from food databases.</p>
+        <p>Scan any product barcode to instantly add it with the correct name, category, and health score from food databases. Non-food items like bags and packaging are automatically recognised and skipped from nutrition ratings.</p>
       </div>
       <div class="feature-card">
         <span class="feature-icon">📷</span>
@@ -381,6 +386,16 @@
         <p>Track medications alongside food — separate Meds cabinet location keeps your medicine expiry dates organised in one place.</p>
       </div>
       <div class="feature-card">
+        <span class="feature-icon">🍏</span>
+        <h3>Smart Autocomplete</h3>
+        <p>Start typing a product name and Fresh Ahead instantly suggests items you've added before — complete with their category, Nutri-Score, and health score pre-filled.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🗣️</span>
+        <h3>Siri Shortcuts</h3>
+        <p>Tell Siri "Add milk to pantry" or "Add eggs to shopping list" and Fresh Ahead opens with the item ready to save. Shortcuts are suggested automatically as you build your pantry history.</p>
+      </div>
+      <div class="feature-card">
         <span class="feature-icon">👨‍👩‍👧</span>
         <h3>Household Profiles</h3>
         <p>Add your household members so every pantry item shows who added it. Cross-device sharing is coming soon.</p>
@@ -404,8 +419,8 @@
       <div class="step">
         <div class="step-num">1</div>
         <div>
-          <h3>Scan or add your items</h3>
-          <p>Use the barcode scanner or type the item name. Photograph the expiry date and the app reads it automatically.</p>
+          <h3>Scan, speak, or type your items</h3>
+          <p>Scan a barcode, tap the mic and say the product name, or just type it. Photograph the expiry date and the app reads it automatically. Previously added items appear as instant suggestions as you type.</p>
         </div>
       </div>
       <div class="step">
@@ -498,7 +513,7 @@
       <button class="fa-modal-close" onclick="document.getElementById('faPrivacyModal').classList.remove('open')">✕</button>
     </div>
     <div class="fa-modal-body">
-      <p class="pp-updated">Last updated: 14 May 2026 &nbsp;·&nbsp; Fresh Ahead by Yoganjali Consultancy Services Ltd</p>
+      <p class="pp-updated">Last updated: 27 May 2026 &nbsp;·&nbsp; Fresh Ahead by Yoganjali Consultancy Services Ltd</p>
 
       <div class="pp-summary">
         <ul>
@@ -522,11 +537,15 @@
       <p><strong>Food recall checks</strong> — the App fetches public recall lists from the US FDA, USDA FSIS, and UK Food Standards Agency. Your pantry contents are matched against these lists entirely on your device. Nothing from your pantry is ever sent externally.</p>
       <p><strong>Healthier alternatives</strong> — when a scanned product has a low health score, the App queries Open Food Facts for better-rated products in the same category. Only category tags (e.g. "en:chocolates") and your approximate country (derived on-device from GPS) are sent — no personal data or pantry contents leave your device. If you tap the cart icon, your browser or the Google app opens a Google Shopping search; that interaction is subject to Google's own privacy policy.</p>
 
+      <p><strong>Voice input</strong> — when you tap the microphone button on the product name field, a short audio clip is recorded and sent to Groq (groq.com) for transcription using the Whisper model. The transcribed text is returned to the App and placed in the name field. Groq does not store audio beyond the duration of the request. This feature is entirely optional; you can add item names by typing instead. Groq's own privacy policy applies to this interaction.</p>
+
       <h3>4. Permissions</h3>
       <ul>
         <li><strong>Camera</strong> — to scan barcodes and photograph expiry dates</li>
+        <li><strong>Microphone</strong> — to record your voice when using the optional voice input feature on the product name field</li>
         <li><strong>Photo Library</strong> — to select existing photos of expiry dates</li>
         <li><strong>Notifications</strong> — to send local reminders before items expire (no push server involved)</li>
+        <li><strong>Location (approximate)</strong> — used only to find healthier product alternatives available in your country; never stored or transmitted beyond the single category-lookup request</li>
       </ul>
 
       <h3>5. On-device ML</h3>

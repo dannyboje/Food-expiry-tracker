@@ -14,10 +14,9 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import SiriShortcuts from '@freshahead/siri-shortcuts';
-// Voice recognition placeholder — @react-native-community/voice is incompatible
-// with React Native new architecture. Stub keeps the UI but disables the feature.
-const Voice: null = null;
-import { useCallback, useEffect, useState } from 'react';
+import { Audio } from 'expo-av';
+import { transcribeAudio } from '@/utils/whisper';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LocationPicker } from './location-picker';
 import { DatePickerField } from './date-picker-field';
@@ -99,6 +98,10 @@ export function AddEditForm({ initialItem, prefill }: Props) {
   const [error, setError] = useState('');
   const [historySuggestions, setHistorySuggestions] = useState<HistoryMatch[]>([]);
 
+  type VoiceState = 'idle' | 'recording' | 'transcribing';
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       const camera = consumeCameraResult();
@@ -175,8 +178,53 @@ export function AddEditForm({ initialItem, prefill }: Props) {
     setHistorySuggestions(history);
   }
 
-function toggleVoice() {
-    Alert.alert('Voice Input', 'Voice input is coming in a future update.');
+  // Stop any in-progress recording if the form is dismissed mid-session
+  useEffect(() => {
+    return () => {
+      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
+    };
+  }, []);
+
+  async function toggleVoice() {
+    if (voiceState === 'transcribing') return;
+
+    if (voiceState === 'recording') {
+      // ── Stop & transcribe ──────────────────────────────────────────────────
+      const rec = recordingRef.current;
+      recordingRef.current = null;
+      setVoiceState('transcribing');
+      try {
+        await rec?.stopAndUnloadAsync();
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+        const uri = rec?.getURI();
+        if (uri) {
+          const text = await transcribeAudio(uri);
+          if (text) handleNameChange(text);
+        }
+      } catch (e: any) {
+        Alert.alert('Voice Input', e?.message ?? 'Transcription failed. Please try again.');
+      } finally {
+        setVoiceState('idle');
+      }
+    } else {
+      // ── Start recording ────────────────────────────────────────────────────
+      try {
+        const { granted } = await Audio.requestPermissionsAsync();
+        if (!granted) {
+          Alert.alert('Microphone Access', 'Please allow microphone access in Settings to use voice input.');
+          return;
+        }
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        recordingRef.current = recording;
+        setVoiceState('recording');
+      } catch {
+        setVoiceState('idle');
+        Alert.alert('Voice Input', 'Could not start recording. Please try again.');
+      }
+    }
   }
 
   function applyHistorySuggestion(match: HistoryMatch) {
@@ -313,11 +361,30 @@ function toggleVoice() {
                 blurOnSubmit
               />
               <TouchableOpacity
-                style={[styles.micBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                style={[
+                  styles.micBtn,
+                  voiceState === 'recording'
+                    ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
+                    : { borderColor: colors.border, backgroundColor: colors.card },
+                ]}
                 onPress={toggleVoice}
+                disabled={voiceState === 'transcribing'}
                 activeOpacity={0.7}>
-                <IconSymbol name="mic" size={24} color={colors.subtext} />
-                <Text style={[styles.scanBtnText, { color: colors.subtext }]}>Voice</Text>
+                {voiceState === 'transcribing' ? (
+                  <ActivityIndicator size="small" color={colors.subtext} />
+                ) : (
+                  <IconSymbol
+                    name={voiceState === 'recording' ? 'mic.fill' : 'mic'}
+                    size={24}
+                    color={voiceState === 'recording' ? '#EF4444' : colors.subtext}
+                  />
+                )}
+                <Text style={[
+                  styles.scanBtnText,
+                  { color: voiceState === 'recording' ? '#EF4444' : colors.subtext },
+                ]}>
+                  {voiceState === 'recording' ? 'Stop' : voiceState === 'transcribing' ? '…' : 'Voice'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.scanBtn, { borderColor: Brand.green, backgroundColor: colors.card }]}

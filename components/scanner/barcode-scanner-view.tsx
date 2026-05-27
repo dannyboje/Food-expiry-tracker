@@ -43,23 +43,33 @@ interface ScanResult {
 const NON_FOOD_TAGS = new Set([
   'en:non-food-products', 'en:non-food',
   'en:bags', 'en:reusable-bags', 'en:carrier-bags', 'en:plastic-bags',
-  'en:shopping-bags', 'en:tote-bags',
+  'en:shopping-bags', 'en:tote-bags', 'en:grocery-bags',
   'en:packaging', 'en:packaging-materials',
   'en:household-products', 'en:cleaning-products', 'en:cleaning',
   'en:cosmetics', 'en:beauty-products', 'en:personal-care',
   'en:textiles', 'en:clothing', 'en:paper-products',
+  'en:bin-bags', 'en:bin-liners', 'en:refuse-sacks',
 ]);
 
-function detectNonFood(tags: string[]): boolean {
+// Name fragments that unambiguously identify non-food items.
+// Kept narrow on purpose — a false positive hides nutrition for real food.
+const NON_FOOD_NAME_RE = /\b(bag\s+for\s+life|bags\s+for\s+life|carrier\s+bag|shopping\s+bag|reusable\s+bag|plastic\s+bag|tote\s+bag|bin\s+bag|bin\s+liner|refuse\s+sack|kitchen\s+roll|toilet\s+(paper|tissue|roll)|baby\s+wipe|wet\s+wipe|cleaning\s+wipe|nappy|diaper)\b/i;
+
+function detectNonFood(tags: string[], productName?: string): boolean {
+  // 1. Exact OFF category tag match
   if (tags.some(t => NON_FOOD_TAGS.has(t))) return true;
+  // 2. Substring scan across all category tags
   const joined = tags.join(' ');
-  return (
+  if (
     joined.includes('non-food') ||
     joined.includes(':bags') ||
     joined.includes('packaging-material') ||
     joined.includes('household-product') ||
     joined.includes('cleaning-product')
-  );
+  ) return true;
+  // 3. Fallback: product name contains an unambiguous non-food phrase
+  if (productName && NON_FOOD_NAME_RE.test(productName)) return true;
+  return false;
 }
 
 interface Props {
@@ -115,9 +125,10 @@ async function lookupOnOpenFoodFacts(barcode: string): Promise<Omit<ScanResult, 
       const novaGroup = p.nova_group ? Number(p.nova_group) : undefined;
       const validNutriScore = ['a', 'b', 'c', 'd', 'e'].includes(nutriScore ?? '') ? nutriScore : undefined;
       const validNova = novaGroup && novaGroup >= 1 && novaGroup <= 4 ? novaGroup : undefined;
-      const isNonFood = detectNonFood(categoriesTags);
+      const displayName = [name, brand].filter(Boolean).join(' — ') || undefined;
+      const isNonFood = detectNonFood(categoriesTags, displayName);
       return {
-        name: [name, brand].filter(Boolean).join(' — ') || undefined,
+        name: displayName,
         category: mapCategory(categoriesTags[0] ?? ''),
         offCategories: categoriesTags,
         countryTag: countriesTags[0] ?? undefined,

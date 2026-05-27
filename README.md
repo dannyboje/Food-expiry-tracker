@@ -14,7 +14,10 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 
 ### Track your food
 - **Add items manually** — enter the name, storage location, quantity, and expiry date in seconds. The app validates that the expiry date is not before the purchase date.
+- **Voice input** — tap the microphone button on the product name field and speak the product name. The audio is transcribed instantly using Groq Whisper and placed directly into the name field — no typing needed.
+- **Pantry history autocomplete** — as you type a product name, the app instantly suggests matching items from your existing pantry history. Selecting a suggestion also pre-fills the category, Nutri-Score, NOVA group, and barcode from the previous entry.
 - **Scan a barcode** — the app looks up the product on Open Food Facts and pre-fills the details automatically, including the Nutri-Score and NOVA processing group.
+- **Non-food detection** — if a scanned barcode belongs to a non-food item (bags, packaging, cleaning products, etc.), the app shows "Fresh Ahead doesn't rate these types of products" and skips the nutrition panel and healthier alternatives — keeping results meaningful.
 - **Duplicate detection** — if you scan a barcode that's already in your pantry the app warns you and lets you cancel, add anyway, or jump straight to the existing item to edit it.
 - **Photograph the expiry date** — point your camera at any "Best Before" or "Use By" label and the app reads the date using on-device OCR — no internet needed.
 - **Product image** — optionally take a photo of the product when adding it. The photo is stored on your device and used as the item's icon in the pantry and detail views.
@@ -66,6 +69,12 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
 - **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 
+### Siri voice commands (iOS)
+- **"Add [item] to pantry"** — say it to Siri and Fresh Ahead opens directly on the Add Item screen with the product name pre-filled.
+- **"Add [item] to shopping list"** — say it to Siri and the app opens the Shopping tab with the item ready to add.
+- **Shortcut suggestions** — Fresh Ahead donates a Siri shortcut each time you add a pantry or shopping item, so Siri learns your habits and surfaces relevant suggestions proactively.
+- **Setup** — go to Settings › Siri & Search on your iPhone and enable Fresh Ahead shortcuts, or add them via the Household screen.
+
 ### Settings & customisation
 - **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
 - **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
@@ -80,6 +89,7 @@ All data — pantry items, photos, recall alerts — stays on your device. The a
 - **Open Food Facts** (barcode lookups and nutrition data)
 - **openFDA / USDA FSIS** (food safety recall checks)
 - **UK Food Standards Agency** (food safety recall checks)
+- **Groq API** (voice input only — short audio clips are sent for transcription when you tap the mic button; audio is not stored by Groq beyond the transcription request)
 
 No account required. No data is ever sent to any server we operate.
 
@@ -116,6 +126,15 @@ npx expo start
 ```
 
 Barcode scanning and on-device OCR (`@react-native-ml-kit/text-recognition`) require a [development build](https://docs.expo.dev/develop/development-builds/introduction/) via EAS — they are not available in Expo Go.
+
+**Voice input** requires a free [Groq API key](https://console.groq.com). Add it to `.env.local`:
+```
+EXPO_PUBLIC_GROQ_API_KEY=gsk_...
+```
+For EAS builds, add it as a secret (only needed once):
+```bash
+eas secret:create --scope project --name EXPO_PUBLIC_GROQ_API_KEY --value gsk_...
+```
 
 ### Building with EAS
 
