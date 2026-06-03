@@ -30,10 +30,11 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they are automatically removed.
 
 ### Food safety recalls
-- **Daily recall check** — every morning at 9:30 AM the app checks four food safety databases: FDA (US), USDA FSIS (US), UK Food Standards Agency (FSA), and FSSAI (India).
-- **Pantry matching** — if any recalled product name matches something in your pantry, a red safety alert appears immediately on the pantry screen.
+- **Daily recall check** — every morning at 9:30 AM the app checks the food safety databases relevant to your country: FDA + USDA FSIS (US), UK Food Standards Agency (GB), or FSSAI (India). Users in other regions receive checks from all four databases so imported products are covered.
+- **Location-aware filtering** — recall sources are selected automatically from the device's locale using the Intl API — no GPS or permissions required.
+- **Pantry matching** — if any recalled product name matches something in your pantry, a red safety alert banner appears at the top of the pantry screen, collapsed by default. Tap to expand and see full recall details.
 - **Immediate new-item check** — when you add or edit a pantry item, it's matched against the cached recall data right away, without waiting for the next daily check.
-- **Dismiss per item** — review each recall alert and dismiss them one by one, or clear them all at once.
+- **Dismiss per item** — expand the alert banner, review each item's recall details individually, and dismiss them one by one. A full-width "Dismiss all alerts" button at the bottom of the expanded panel clears all at once.
 
 ### Shopping list
 - **Multiple lists** — create as many named shopping lists as you like. Tap the pencil icon to rename any list inline. Delete a list with a confirmation step.
@@ -71,15 +72,6 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
 - **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 
-### Recipes
-- **Pantry-based recipe generation** — select any ingredients from your pantry (sorted by urgency so expiring items appear first), add optional extras you have to hand, choose a cuisine and a meal type, then tap **Generate Recipe**. The app uses Groq's LLaMA 3.3 model to produce a personalised recipe tailored to your choices.
-- **Quick-select shortcuts** — "Use expiring" selects all items expiring within 3 days in one tap, encouraging zero-waste cooking. "Select all" and "Clear" are also available.
-- **15 cuisines** — Surprise me, Indian, British, Thai, Italian, Mexican, Chinese, Japanese, French, Mediterranean, Greek, Korean, American, Middle Eastern, and Spanish.
-- **4 meal types** — Breakfast, Lunch, Evening Snack, and Dinner.
-- **Structured recipe card** — results show the recipe name, a description, serves / prep / cook times, a full ingredient list with quantities, numbered method steps, and a chef's tip.
-- **Try again** — tap "Try a different recipe" to generate a new variation with the same settings.
-- **No API key required** — recipes are sourced from TheMealDB, a free community recipe database. No account or key needed.
-
 ### Siri voice commands (iOS)
 - **"Add [item] to pantry"** — say it to Siri and Fresh Ahead opens directly on the Add Item screen with the product name pre-filled.
 - **"Add [item] to shopping list"** — say it to Siri and the app opens the Shopping tab with the item ready to add.
@@ -96,9 +88,9 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 All data — pantry items, photos, recall alerts — stays on your device. The app only makes outbound requests to:
 
 - **Open Food Facts** (barcode lookups and nutrition data)
-- **openFDA / USDA FSIS** (food safety recall checks)
-- **UK Food Standards Agency** (food safety recall checks)
-- **FSSAI** (India food safety recall checks — RSS feed, best-effort)
+- **openFDA / USDA FSIS** (US food safety recall checks — only fetched for US-locale devices)
+- **UK Food Standards Agency** (UK food safety recall checks — only fetched for GB-locale devices)
+- **FSSAI** (India food safety recall checks — only fetched for IN-locale devices; RSS feed, best-effort)
 - **Groq API** (voice input only — short audio clips are sent for transcription when you tap the mic button; audio is not stored by Groq beyond the transcription request)
 
 No account required. No data is ever sent to any server we operate.
