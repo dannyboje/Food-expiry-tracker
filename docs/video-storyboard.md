@@ -9,7 +9,7 @@
 ## Before you record
 
 1. Run the app on a simulator or device (`npx expo run:ios`)
-2. Go to **Settings** → tap **Load Demo Data** → confirm
+2. Go to **Household** → scroll down → tap **Load Demo Data** → confirm
 3. Navigate away and back to refresh all screens
 4. Enable Do Not Disturb / Airplane Mode to hide notification banners
 5. Set simulator to iPhone 15 Pro (6.1″) for clean screenshots
@@ -72,8 +72,8 @@
 ---
 
 ### Shot 6 — Smart alerts (50–58 s)
-**Screen:** Settings tab  
-**Action:** Show the Alert Schedule section with the four tier steppers  
+**Screen:** Household tab — scroll down to the Alert Schedule section  
+**Action:** Show the four tier steppers (Under 5 days, 5–14 days, 15–29 days, 30+ days)  
 **Narration:** *"Smart notifications remind you before things expire — and you control exactly how much notice you get."*
 
 ---
@@ -91,7 +91,21 @@
 
 ---
 
-### Shot 8 — Household (75–85 s)
+### Shot 8 — Recipes (75–83 s)
+**Screen:** Recipes tab  
+**Action:**
+1. Tap several expiring items (e.g. Chicken Breast, Baby Spinach, Greek Yogurt) — checkmarks appear
+2. Tap **⚠️ Use expiring** quick-select to show automatic selection
+3. Choose **Indian** cuisine chip
+4. Tap **Dinner** meal type card
+5. Tap **✨ Generate Recipe** — show the spinner then the recipe card sliding into view
+6. Briefly scroll the recipe card to show the ingredient list and numbered method steps  
+
+**Narration:** *"Pick ingredients from your pantry, choose a cuisine, and Fresh Ahead generates a personalised recipe — perfect for using things up before they expire."*
+
+---
+
+### Shot 9 — Household (93–103 s)
 **Screen:** Household tab  
 **Action:**
 1. Show "The Garcia Family" header with Alex and Sam's avatars
@@ -101,7 +115,7 @@
 
 ---
 
-### Shot 9 — Privacy & close (85–95 s)
+### Shot 10 — Privacy & close (103–115 s)
 **Screen:** Pantry tab (overview)  
 **Action:** Hold on the pantry list — no action needed, just a clean wide shot  
 **Narration:** *"Everything stays on your device. No account, no cloud, no tracking — ever. Download Fresh Ahead free on the App Store and Google Play."*
@@ -122,8 +136,10 @@ Use the iOS Simulator's **File → Save Screenshot** (⌘S) or the device's scre
 | 6 | Scan detail | Pringles: score 22, additive groups, emoji nutrition rows |
 | 7 | Shopping — full list | Favourites + Weekly Shop + Meal Prep, collapsed |
 | 8 | Shopping — item with score | Pringles row showing d badge + score chip |
-| 9 | Household tab | Garcia Family header + waste tracker stats |
-| 10 | Settings | Alert schedule steppers |
+| 9 | Recipes — form filled | Expiring items selected, Indian cuisine chip, Dinner meal type |
+| 10 | Recipes — result card | Generated recipe: name, ingredients, numbered steps |
+| 11 | Household tab | Garcia Family header + waste tracker stats |
+| 12 | Household — alert schedule | Alert schedule steppers |
 
 ---
 

@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import SiriShortcuts from '@freshahead/siri-shortcuts';
+import { SiriShortcuts } from '@freshahead/siri-shortcuts';
 import { Audio } from 'expo-av';
 import { transcribeAudio } from '@/utils/whisper';
 import { useCallback, useEffect, useRef, useState } from 'react';

@@ -46,6 +46,11 @@ const MAPPING = {
   'doc.on.doc': 'content-copy',
   'checkmark.circle.fill': 'check-circle',
   'heart.fill': 'favorite',
+  'hands.sparkles.fill': 'volunteer-activism',
+  'lightbulb.fill': 'lightbulb',
+  'info.circle.fill': 'info',
+  'chevron.up': 'keyboard-arrow-up',
+  'chevron.down': 'keyboard-arrow-down',
 } as IconMapping;
 
 /**

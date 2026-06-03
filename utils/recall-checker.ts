@@ -5,7 +5,7 @@ import type { FoodItem } from '@/types/food-item';
 
 export interface RecallItem {
   id: string;
-  source: 'FDA' | 'USDA' | 'FSA';
+  source: 'FDA' | 'USDA' | 'FSA' | 'FSSAI';
   productDescription: string;
   reason: string;
   date: string;
@@ -26,12 +26,35 @@ const ALERTS_KEY       = '@recall_alerts';
 const DISMISSED_KEY    = '@recall_dismissed';
 const RECALLS_CACHE_KEY = '@recall_cache';
 
+// ── Network helper ─────────────────────────────────────────────────────────
+
+// AbortSignal.timeout() is not available in all React Native environments —
+// Hermes polyfills AbortSignal but not the static .timeout() factory method.
+function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+// ── Region detection ───────────────────────────────────────────────────────
+
+// Uses the Intl API (Hermes-supported) — no GPS, no permissions, works offline.
+// Returns ISO 3166-1 alpha-2 upper-case country code, e.g. "US", "GB", "IN".
+function getDeviceRegion(): string {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale; // e.g. "en-US", "en-GB"
+    return locale.split('-').pop()?.toUpperCase() ?? '';
+  } catch {
+    return '';
+  }
+}
+
 // ── API fetchers ───────────────────────────────────────────────────────────
 
 async function fetchFDARecalls(): Promise<RecallItem[]> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     'https://api.fda.gov/food/enforcement.json?limit=100&sort=report_date:desc',
-    { signal: AbortSignal.timeout(12_000) },
+    12_000,
   );
   if (!res.ok) return [];
   const json = await res.json() as { results?: Record<string, string>[] };
@@ -46,9 +69,9 @@ async function fetchFDARecalls(): Promise<RecallItem[]> {
 }
 
 async function fetchUSDARecalls(): Promise<RecallItem[]> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     'https://www.fsis.usda.gov/fsis/api/recall/v/1?field=RecalledDate&direction=desc&limit=50',
-    { signal: AbortSignal.timeout(12_000) },
+    12_000,
   );
   if (!res.ok) return [];
   const json = await res.json() as Record<string, string>[];
@@ -65,9 +88,9 @@ async function fetchUSDARecalls(): Promise<RecallItem[]> {
 
 // FSA Food Alerts API (UK Food Standards Agency) — free, no key required.
 async function fetchFSARecalls(): Promise<RecallItem[]> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     'https://data.food.gov.uk/food-alerts/v1/?limit=50&sort=-modified',
-    { signal: AbortSignal.timeout(12_000) },
+    12_000,
   );
   if (!res.ok) return [];
   const json = await res.json() as { items?: Record<string, unknown>[] };
@@ -109,6 +132,67 @@ async function fetchFSARecalls(): Promise<RecallItem[]> {
       riskLevel: String(r.riskStatement ?? ''),
     };
   });
+}
+
+// ── RSS/XML parser (React Native has no DOM — parse with regex) ────────────
+
+// Extracts inner text from a tag, handling both <![CDATA[...]]> and plain text.
+function xmlField(block: string, tag: string): string {
+  const re = new RegExp(
+    `<${tag}[^>]*>(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))<\\/${tag}>`,
+    'i',
+  );
+  const m = block.match(re);
+  return ((m?.[1] ?? m?.[2]) || '').replace(/<[^>]+>/g, '').trim();
+}
+
+function parseRssItems(xml: string): Array<{
+  title: string; description: string; pubDate: string; guid: string;
+}> {
+  const out: Array<{ title: string; description: string; pubDate: string; guid: string }> = [];
+  const itemRe = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = itemRe.exec(xml)) !== null) {
+    const b = m[1];
+    out.push({
+      title:       xmlField(b, 'title'),
+      description: xmlField(b, 'description'),
+      pubDate:     xmlField(b, 'pubDate') || xmlField(b, 'dc:date'),
+      guid:        xmlField(b, 'guid') || xmlField(b, 'link'),
+    });
+  }
+  return out;
+}
+
+// FSSAI (Food Safety and Standards Authority of India) — RSS feed.
+// Best-effort: silently returns [] on any network or parse failure.
+async function fetchFSSAIRecalls(): Promise<RecallItem[]> {
+  const FSSAI_URLS = [
+    'https://www.fssai.gov.in/rss/food-safety-alerts.xml',
+    'https://www.fssai.gov.in/rss/fssai_news.xml',
+  ];
+
+  let xml = '';
+  for (const url of FSSAI_URLS) {
+    try {
+      const res = await fetchWithTimeout(url, 12_000);
+      if (res.ok) { xml = await res.text(); break; }
+    } catch { /* try next */ }
+  }
+  if (!xml) return [];
+
+  const RECALL_RE = /recall|withdraw|alert|unsafe|contamina|prohibit|ban|seizure|adulterat/i;
+
+  return parseRssItems(xml)
+    .filter((item) => RECALL_RE.test(item.title) || RECALL_RE.test(item.description))
+    .map((item, i) => ({
+      id:                 item.guid || `fssai-${i}`,
+      source:             'FSSAI' as const,
+      productDescription: item.title,
+      reason:             item.description,
+      date:               item.pubDate,
+      riskLevel:          '',
+    }));
 }
 
 // ── Keyword matching ───────────────────────────────────────────────────────
@@ -228,19 +312,29 @@ export async function runMatchOnCachedRecalls(items: FoodItem[]): Promise<Recall
   return matches;
 }
 
+// ── Region → fetchers map ──────────────────────────────────────────────────
+
+type Fetcher = () => Promise<RecallItem[]>;
+
+function getFetchersForRegion(region: string): Fetcher[] {
+  switch (region) {
+    case 'US': return [fetchFDARecalls, fetchUSDARecalls];
+    case 'GB': return [fetchFSARecalls];
+    case 'IN': return [fetchFSSAIRecalls];
+    default:   return [fetchFDARecalls, fetchUSDARecalls, fetchFSARecalls, fetchFSSAIRecalls];
+  }
+}
+
 // ── Main entry point ───────────────────────────────────────────────────────
 
 export async function runRecallCheck(items: FoodItem[]): Promise<RecallMatch[]> {
-  const [fdaResult, usdaResult, fsaResult] = await Promise.allSettled([
-    fetchFDARecalls(),
-    fetchUSDARecalls(),
-    fetchFSARecalls(),
-  ]);
-  const allRecalls: RecallItem[] = [
-    ...(fdaResult.status === 'fulfilled' ? fdaResult.value : []),
-    ...(usdaResult.status === 'fulfilled' ? usdaResult.value : []),
-    ...(fsaResult.status === 'fulfilled' ? fsaResult.value : []),
-  ];
+  const region   = getDeviceRegion();
+  const fetchers = getFetchersForRegion(region);
+
+  const results  = await Promise.allSettled(fetchers.map((f: Fetcher) => f()));
+  const allRecalls: RecallItem[] = results.flatMap((r) =>
+    r.status === 'fulfilled' ? r.value : ([] as RecallItem[]),
+  );
 
   // Cache the fetched recalls so mid-day item additions can match against them
   // without another network round-trip.

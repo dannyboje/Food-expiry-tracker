@@ -27,6 +27,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Brand.green,
         headerShown: false,
         tabBarButton: HapticTab,
+
         tabBarStyle: Platform.select({
           ios: { position: 'absolute' },
           default: {},
@@ -36,14 +37,14 @@ export default function TabLayout() {
         name="pantry"
         options={{
           title: 'Pantry',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="refrigerator" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={30} name="refrigerator" color={color} />,
         }}
       />
       <Tabs.Screen
         name="household"
         options={{
           title: 'Household',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={30} name="person.2.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -57,22 +58,23 @@ export default function TabLayout() {
         name="health"
         options={{
           title: 'Health',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="heart.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={30} name="heart.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="shopping"
         options={{
           title: 'Shopping',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="cart" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={30} name="cart" color={color} />,
         }}
       />
-      <Tabs.Screen name="donate" options={{ href: null }} />
+      {/* Hidden — removed tabs */}
+      <Tabs.Screen name="insights" options={{ href: null }} />
+      <Tabs.Screen name="support" options={{ href: null }} />
       {/* Hidden tabs — content moved into Household screen */}
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
-      <Tabs.Screen name="recipes" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -90,7 +92,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.green,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Platform.OS === 'ios' ? 4 : 0,
+    marginBottom: Platform.OS === 'ios' ? 24 : 14,
     shadowColor: Brand.green,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

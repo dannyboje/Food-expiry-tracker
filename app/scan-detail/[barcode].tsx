@@ -66,6 +66,8 @@ export default function ScanDetailScreen() {
       fetchAlternatives(scan.offCategories!, countryTag)
     ).then(({ alts }) => {
       if (!cancelled) { setAlternatives(alts); setLoadingAlts(false); }
+    }).catch(() => {
+      if (!cancelled) setLoadingAlts(false);
     });
     return () => { cancelled = true; };
   }, [scan]);

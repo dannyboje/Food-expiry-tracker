@@ -99,9 +99,11 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     recallAlerts: [],
   });
 
-  // Stable ref so AppState listener always sees latest items without re-subscribing.
+  // Stable refs so callbacks always see the latest state without stale closures.
   const itemsRef = useRef<FoodItem[]>([]);
+  const recallAlertsRef = useRef<RecallMatch[]>([]);
   useEffect(() => { itemsRef.current = state.items; }, [state.items]);
+  useEffect(() => { recallAlertsRef.current = state.recallAlerts; }, [state.recallAlerts]);
 
   async function syncAll(items: FoodItem[]) {
     const enriched = items.map(enrichItem);
@@ -173,18 +175,18 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
         return dbUpdateItem(withIds).catch(() => {});
       })
       .catch(() => {});
-    const newList = [...state.items, itemWithIds];
+    const newList = [...itemsRef.current, itemWithIds];
     syncAll(newList).catch(() => {});
     // Immediately check the new item against cached recalls (no network call needed).
     runMatchOnCachedRecalls(newList)
       .then((alerts) => {
-        const existingIds = new Set(state.recallAlerts.map((a) => a.pairId));
+        const existingIds = new Set(recallAlertsRef.current.map((a) => a.pairId));
         const newAlerts = alerts.filter((a) => !existingIds.has(a.pairId));
         if (alerts.length > 0) dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
         if (newAlerts.length > 0) fireRecallNotification(newAlerts.length).catch(() => {});
       })
       .catch(() => {});
-  }, [state.items, state.recallAlerts]);
+  }, []);
 
   const updateItem = useCallback(async (item: FoodItem) => {
     const updated: FoodItem = { ...item, updatedAt: new Date().toISOString() };
@@ -197,40 +199,40 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
         return dbUpdateItem(withIds).catch(() => {});
       })
       .catch(() => {});
-    const newList = state.items.map((i) => (i.id === updated.id ? updated : i));
+    const newList = itemsRef.current.map((i) => (i.id === updated.id ? updated : i));
     syncAll(newList).catch(() => {});
     // Re-check immediately in case the item name was changed to match a recall.
     runMatchOnCachedRecalls(newList)
       .then((alerts) => {
-        const existingIds = new Set(state.recallAlerts.map((a) => a.pairId));
+        const existingIds = new Set(recallAlertsRef.current.map((a) => a.pairId));
         const newAlerts = alerts.filter((a) => !existingIds.has(a.pairId));
         if (alerts.length > 0) dispatch({ type: 'SET_RECALL_ALERTS', payload: alerts });
         if (newAlerts.length > 0) fireRecallNotification(newAlerts.length).catch(() => {});
       })
       .catch(() => {});
-  }, [state.items, state.recallAlerts]);
+  }, []);
 
   const deleteItem = useCallback(async (id: string) => {
-    const item = state.items.find((i) => i.id === id);
+    const item = itemsRef.current.find((i) => i.id === id);
     if (item) {
       await cancelItemNotifications(item.notificationIds);
       addRemovedToShoppingList(item).catch(() => {});
     }
     await dbDeleteItem(id);
     dispatch({ type: 'DELETE_ITEM', payload: id });
-    syncAll(state.items.filter((i) => i.id !== id)).catch(() => {});
-  }, [state.items]);
+    syncAll(itemsRef.current.filter((i) => i.id !== id)).catch(() => {});
+  }, []);
 
   const markAsUsed = useCallback(async (id: string, type: ConsumptionType) => {
-    const item = state.items.find((i) => i.id === id);
+    const item = itemsRef.current.find((i) => i.id === id);
     if (!item) return;
     await recordConsumption(item.id, item.name, item.category, type, item.quantity, item.quantityUnit);
     await cancelItemNotifications(item.notificationIds);
     await dbDeleteItem(id);
     dispatch({ type: 'DELETE_ITEM', payload: id });
-    syncAll(state.items.filter((i) => i.id !== id)).catch(() => {});
+    syncAll(itemsRef.current.filter((i) => i.id !== id)).catch(() => {});
     addRemovedToShoppingList(item).catch(() => {});
-  }, [state.items]);
+  }, []);
 
   const setSearch = useCallback((q: string) => dispatch({ type: 'SET_SEARCH', payload: q }), []);
   const setFilter = useCallback((f: StorageLocation | 'all') => dispatch({ type: 'SET_FILTER', payload: f }), []);
@@ -241,10 +243,10 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearAllRecallAlerts = useCallback(async () => {
-    const pairIds = state.recallAlerts.map((a) => a.pairId);
+    const pairIds = recallAlertsRef.current.map((a) => a.pairId);
     dispatch({ type: 'SET_RECALL_ALERTS', payload: [] });
     await dismissAllAlerts(pairIds);
-  }, [state.recallAlerts]);
+  }, []);
 
   const clearAllPantryItems = useCallback(async () => {
     const deleted = await deleteAllItems();
@@ -262,10 +264,10 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
     for (const item of deleted) {
       cancelItemNotifications(item.notificationIds).catch(() => {});
     }
-    const remaining = state.items.filter((i) => !deletedIds.has(i.id));
+    const remaining = itemsRef.current.filter((i) => !deletedIds.has(i.id));
     dispatch({ type: 'LOAD_ITEMS', payload: remaining });
     syncAll(remaining).catch(() => {});
-  }, [state.items]);
+  }, []);
 
   return (
     <PantryContext.Provider value={{

@@ -5,11 +5,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import KVStore from 'expo-sqlite/kv-store';
-import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
+import { useFocusEffect } from 'expo-router';
 import { seedDemoData } from '@/utils/seed-demo-data';
+import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
 import { DIGEST_ENABLED_KEY, DIGEST_HOUR_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
 import { usePantry } from '@/hooks/use-pantry';
 
@@ -110,9 +110,15 @@ export default function HouseholdScreen() {
   const [thresholds, setThresholds] = useState<AlertThresholds>(DEFAULT_THRESHOLDS);
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestHour, setDigestHour] = useState(9);
-  const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
   const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
+
+  useFocusEffect(
+    useCallback(() => {
+      getConsumptionStats().then(setConsumptionStats).catch(() => {});
+    }, []),
+  );
 
   useEffect(() => {
     loadHousehold().then((p) => {
@@ -130,10 +136,6 @@ export default function HouseholdScreen() {
       .catch(() => {});
     getAlertThresholds().then(setThresholds).catch(() => {});
   }, []);
-
-  useFocusEffect(useCallback(() => {
-    getConsumptionStats().then(setConsumptionStats).catch(() => {});
-  }, []));
 
   async function toggleNotifications(value: boolean) {
     setNotificationsEnabled(value);
@@ -246,6 +248,23 @@ export default function HouseholdScreen() {
     }
   }
 
+  function handleResetStats() {
+    Alert.alert(
+      'Reset waste tracker?',
+      'This clears all recorded usage and waste history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset', style: 'destructive',
+          onPress: async () => {
+            await resetConsumptionEvents();
+            setConsumptionStats(null);
+          },
+        },
+      ],
+    );
+  }
+
   function handleClearRecent() {
     Alert.alert(
       'Clear recent items?',
@@ -264,24 +283,6 @@ export default function HouseholdScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Clear everything', style: 'destructive', onPress: () => clearAllPantryItems().catch(() => {}) },
-      ],
-    );
-  }
-
-  function handleResetStats() {
-    Alert.alert(
-      'Reset Food Waste Tracker?',
-      'This will permanently delete all your usage and waste history. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset', style: 'destructive',
-          onPress: async () => {
-            await resetConsumptionEvents();
-            const fresh = await getConsumptionStats();
-            setConsumptionStats(fresh);
-          },
-        },
       ],
     );
   }
@@ -509,50 +510,51 @@ export default function HouseholdScreen() {
           </View>
         </View>
 
-        {/* ── Food Waste Stats ──────────────────────── */}
-        {consumptionStats !== null && (consumptionStats.totalUsed + consumptionStats.totalWasted) > 0 && (
-          <>
-            <Text style={[styles.settingsSub, { color: colors.subtext }]}>FOOD WASTE TRACKER</Text>
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* ── Food Waste Tracker ───────────────────── */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { color: colors.subtext }]}>FOOD WASTE TRACKER</Text>
+            {consumptionStats && (consumptionStats.totalUsed + consumptionStats.totalWasted) > 0 && (
+              <TouchableOpacity onPress={handleResetStats}>
+                <Text style={[styles.resetBtn, { color: Brand.red }]}>Reset</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {!consumptionStats || (consumptionStats.totalUsed + consumptionStats.totalWasted) === 0 ? (
+            <Text style={[styles.statsHint, { color: colors.subtext }]}>
+              Long-press any pantry item and tap "I used it" or "It expired / wasted" to start tracking your food usage.
+            </Text>
+          ) : (
+            <>
               <View style={styles.statsRow}>
                 <View style={styles.statCell}>
-                  <Text style={[styles.statNumber, { color: Brand.green }]}>{consumptionStats.thisMonth.used}</Text>
+                  <Text style={[styles.statNumber, { color: Brand.green }]}>
+                    {consumptionStats.thisMonth.used}
+                  </Text>
                   <Text style={[styles.statLabel, { color: colors.subtext }]}>Used this month</Text>
                 </View>
                 <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statCell}>
-                  <Text style={[styles.statNumber, { color: '#EF4444' }]}>{consumptionStats.thisMonth.wasted}</Text>
+                  <Text style={[styles.statNumber, { color: consumptionStats.thisMonth.wasted > 0 ? Brand.red : colors.text }]}>
+                    {consumptionStats.thisMonth.wasted}
+                  </Text>
                   <Text style={[styles.statLabel, { color: colors.subtext }]}>Wasted this month</Text>
                 </View>
                 <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statCell}>
-                  <Text style={[styles.statNumber, { color: consumptionStats.wasteRate > 30 ? '#EF4444' : consumptionStats.wasteRate > 15 ? '#F97316' : Brand.green }]}>
+                  <Text style={[styles.statNumber, { color: consumptionStats.wasteRate > 30 ? Brand.red : consumptionStats.wasteRate > 0 ? Brand.orange : Brand.green }]}>
                     {consumptionStats.wasteRate}%
                   </Text>
                   <Text style={[styles.statLabel, { color: colors.subtext }]}>Waste rate</Text>
                 </View>
               </View>
               <Text style={[styles.statsHint, { color: colors.subtext }]}>
-                Long-press any pantry item to mark it as used or wasted.
+                All-time: {consumptionStats.totalUsed} used · {consumptionStats.totalWasted} wasted
               </Text>
-              <TouchableOpacity onPress={handleResetStats} style={styles.resetBtn}>
-                <IconSymbol name="arrow.counterclockwise" size={13} color="#EF4444" />
-                <Text style={styles.resetBtnText}>Reset tracker</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {consumptionStats !== null && (consumptionStats.totalUsed + consumptionStats.totalWasted) === 0 && (
-          <>
-            <Text style={[styles.settingsSub, { color: colors.subtext }]}>FOOD WASTE TRACKER</Text>
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.codeHint, { color: colors.subtext }]}>
-                {`Long-press any pantry item and tap "I used it" or "It expired / wasted" to start tracking your food usage.`}
-              </Text>
-            </View>
-          </>
-        )}
+            </>
+          )}
+        </View>
 
         {/* ── Settings ─────────────────────────────── */}
         <View style={styles.settingsHeading}>
@@ -677,7 +679,7 @@ export default function HouseholdScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Add to Pantry</Text>
               <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>
-                "Hey Siri, Add Milk to pantry"
+                {'"Hey Siri, Add Milk to pantry"'}
               </Text>
             </View>
           </View>
@@ -687,7 +689,7 @@ export default function HouseholdScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.settingsRowTitle, { color: colors.text }]}>Add to Shopping</Text>
               <Text style={[styles.settingsRowSub, { color: colors.subtext }]}>
-                "Hey Siri, Add Eggs to shopping list"
+                {'"Hey Siri, Add Eggs to shopping list"'}
               </Text>
             </View>
           </View>
@@ -841,6 +843,15 @@ const styles = StyleSheet.create({
   comingSoonIcon: { fontSize: 14, lineHeight: 18 },
   comingSoonText: { flex: 1, fontSize: 12, lineHeight: 17 },
 
+  // Waste tracker
+  statsRow:    { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  statCell:    { flex: 1, alignItems: 'center', gap: 4 },
+  statDivider: { width: 1, height: 40, marginHorizontal: 4 },
+  statNumber:  { fontSize: 28, fontWeight: '900' },
+  statLabel:   { fontSize: 11, textAlign: 'center' },
+  statsHint:   { fontSize: 12, lineHeight: 17, marginTop: 8 },
+  resetBtn:    { fontSize: 13, fontWeight: '600' },
+
   // Settings section
   settingsHeading: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 8 },
   settingsTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
@@ -857,18 +868,6 @@ const styles = StyleSheet.create({
   tierShelf: { fontSize: 12, fontWeight: '500' },
   tierRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tierLabel: { fontSize: 13, fontWeight: '500' },
-  // Consumption stats
-  statsRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  statCell: { flex: 1, alignItems: 'center', gap: 4 },
-  statDivider: { width: StyleSheet.hairlineWidth, height: 40 },
-  statNumber: { fontSize: 28, fontWeight: '900' },
-  statLabel: { fontSize: 11, textAlign: 'center' },
-  statsHint: { fontSize: 12, marginTop: 10, lineHeight: 16 },
-  resetBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-end', marginTop: 12, padding: 6,
-  },
-  resetBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
   dangerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,

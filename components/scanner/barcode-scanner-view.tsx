@@ -1,6 +1,5 @@
 import { Animated, ActivityIndicator, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import { Brand } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -280,6 +279,8 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
       setAlternatives(alts);
       setAltsWereLocal(wasLocal);
       setLoadingAlts(false);
+    }).catch(() => {
+      if (!cancelled) setLoadingAlts(false);
     });
     return () => { cancelled = true; };
   }, [result, userCountryTag]);
@@ -288,21 +289,27 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
     if (scanLock.current) return;
     scanLock.current = true;
     setLoading(true);
-    const info = await lookupBarcode(data);
-    setLoading(false);
-    const suggestedExpiryDate = getSuggestedExpiryDate(info.category);
-    const full = { barcode: data, ...info, suggestedExpiryDate };
-    setResult(full);
-    // Persist every scan so Health Scores can show recently scanned products
-    saveRecentScan({
-      barcode: data,
-      name: full.name ?? `Barcode ${data}`,
-      nutriScore: full.nutriScore,
-      novaGroup: full.novaGroup,
-      rawScore: full.fatSecretScore,
-      offCategories: full.offCategories,
-      scannedAt: new Date().toISOString(),
-    });
+    try {
+      const info = await lookupBarcode(data);
+      setLoading(false);
+      const suggestedExpiryDate = getSuggestedExpiryDate(info.category);
+      const full = { barcode: data, ...info, suggestedExpiryDate };
+      setResult(full);
+      // Persist every scan so Health Scores can show recently scanned products
+      saveRecentScan({
+        barcode: data,
+        name: full.name ?? `Barcode ${data}`,
+        nutriScore: full.nutriScore,
+        novaGroup: full.novaGroup,
+        rawScore: full.fatSecretScore,
+        offCategories: full.offCategories,
+        scannedAt: new Date().toISOString(),
+      }).catch(() => {});
+    } catch {
+      // Unexpected error — release lock and clear spinner so user can try again
+      setLoading(false);
+      scanLock.current = false;
+    }
   }
 
   function handleAddToPantry() {
@@ -419,7 +426,7 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
                 )}
                 {result.isNonFood && (
                   <Text style={styles.noScoreText}>
-                    Fresh Ahead doesn't rate these types of products
+                    {"Fresh Ahead doesn't rate these types of products"}
                   </Text>
                 )}
                 {!result.isNonFood && score === undefined && !result.allSourcesFailed && (

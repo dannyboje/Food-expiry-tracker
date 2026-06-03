@@ -34,6 +34,7 @@ const LOCATION_LABEL: Record<string, string> = {
   fridge: 'Fridge',
   freezer: 'Freezer',
   pantry: 'Dry pantry',
+  meds: 'Medicine cabinet',
 };
 
 interface Props {

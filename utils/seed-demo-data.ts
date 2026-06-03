@@ -7,11 +7,11 @@
  */
 
 import KVStore from 'expo-sqlite/kv-store';
-import * as SQLite from 'expo-sqlite';
 import type { FoodItem } from '@/types/food-item';
-import { insertItem } from '@/utils/storage';
+import { insertItem, deleteAllItems } from '@/utils/storage';
 import type { ShoppingList, FavoriteItem } from '@/utils/shopping-store';
 import type { RecentScan } from '@/utils/recent-scans-store';
+import type { RecallMatch } from '@/utils/recall-checker';
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 
@@ -26,8 +26,9 @@ const TODAY = daysFromToday(0);
 // ── Clear everything ───────────────────────────────────────────────────────
 
 async function clearAll(): Promise<void> {
-  const database = await SQLite.openDatabaseAsync('pantry.db');
-  await database.runAsync('DELETE FROM food_items');
+  // Use the shared storage module so the write goes through the serialised queue
+  // and avoids "database is locked" errors from competing connections on Android.
+  await deleteAllItems();
 
   const kvKeys = [
     '@shopping_lists_v2',
@@ -452,7 +453,7 @@ const RECENT_SCANS: RecentScan[] = [
     scannedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    barcode: '5010477305041',
+    barcode: '5010677800046',
     name: 'Quaker Oats',
     nutriScore: 'a',
     novaGroup: 1,
@@ -498,6 +499,64 @@ const HOUSEHOLD_PROFILE = {
   createdAt: new Date().toISOString(),
 };
 
+// ── Demo recall alerts ─────────────────────────────────────────────────────
+// One per region so the banner shows FDA / USDA / FSA / FSSAI badges.
+
+const DEMO_RECALLS: RecallMatch[] = [
+  {
+    pairId: 'fda-recall-001:demo-05',
+    pantryItemId: 'demo-05',
+    pantryItemName: 'Baby Spinach',
+    recall: {
+      id: 'fda-recall-001',
+      source: 'FDA',
+      productDescription: 'Organicgirl Baby Spinach — 5 oz & 16 oz bags — Lot codes L240312 & L240313',
+      reason: 'Potential contamination with Listeria monocytogenes. Consuming food contaminated with Listeria can cause serious illness in young children, frail or elderly people, and others with weakened immune systems.',
+      date: '20240312',
+      riskLevel: 'Class I',
+    },
+  },
+  {
+    pairId: 'usda-recall-002:demo-02',
+    pantryItemId: 'demo-02',
+    pantryItemName: 'Free Range Chicken Breast',
+    recall: {
+      id: 'usda-recall-002',
+      source: 'USDA',
+      productDescription: 'Happy Farms Free Range Chicken Breast Fillets — 500g vacuum packs — Use By 15 Mar 2024',
+      reason: 'Possible Salmonella contamination detected during routine microbiological testing. All affected products were produced on 10–11 March 2024 at facility EST. 9400.',
+      date: '20240314',
+      riskLevel: 'Class I',
+    },
+  },
+  {
+    pairId: 'fsa-recall-003:demo-03',
+    pantryItemId: 'demo-03',
+    pantryItemName: 'Mature Cheddar Cheese',
+    recall: {
+      id: 'fsa-recall-003',
+      source: 'FSA',
+      productDescription: 'Davidstow Mature Cheddar Cheese 400g — Brand: Davidstow — Batch codes: DC240101, DC240102',
+      reason: 'Undeclared mustard allergen. The product contains mustard which is not declared on the label. This makes the product a possible health risk for anyone with an allergy or sensitivity to mustard.',
+      date: '2024-03-10T09:00:00Z',
+      riskLevel: 'Allergy alert',
+    },
+  },
+  {
+    pairId: 'fssai-recall-004:demo-11',
+    pantryItemId: 'demo-11',
+    pantryItemName: 'Basmati Rice',
+    recall: {
+      id: 'fssai-recall-004',
+      source: 'FSSAI',
+      productDescription: 'Golden Star Extra Long Basmati Rice 1kg — Brand: Golden Star — Batch No. GS-BR-2024-02',
+      reason: 'Excessive pesticide residue (Tricyclazole) detected above permissible limits as per Food Safety and Standards (Contaminants, Toxins and Residues) Regulations. Product seized from distributor warehouses in Delhi and Mumbai.',
+      date: 'Fri, 08 Mar 2024 10:30:00 +0530',
+      riskLevel: 'Unsafe for consumption',
+    },
+  },
+];
+
 // ── Main export ────────────────────────────────────────────────────────────
 
 export async function seedDemoData(): Promise<void> {
@@ -512,5 +571,6 @@ export async function seedDemoData(): Promise<void> {
   await KVStore.setItem('@shopping_favorites_v1', JSON.stringify(FAVORITES));
   await KVStore.setItem('@recent_scans_v1', JSON.stringify(RECENT_SCANS));
   await KVStore.setItem('@household_profile', JSON.stringify(HOUSEHOLD_PROFILE));
+  await KVStore.setItem('@recall_alerts', JSON.stringify(DEMO_RECALLS));
   await KVStore.setItem('email_capture_shown', 'true');
 }

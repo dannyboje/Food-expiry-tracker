@@ -7,7 +7,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import SiriShortcuts from '@freshahead/siri-shortcuts';
+import { SiriShortcuts } from '@freshahead/siri-shortcuts';
 import { BgFoodDecor, HeaderFoodDecor } from '@/components/ui/food-decor';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -96,7 +96,6 @@ export default function ShoppingScreen() {
       });
     }, 300);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, siriName]);
 
   // ── Persist helpers ──────────────────────────────────────────────────────
@@ -222,13 +221,6 @@ export default function ShoppingScreen() {
     updateList(listId, (items) =>
       items.map((i) => i.id === item.id ? { ...i, isFavorite: nowFavorite } : i)
     );
-  }
-
-  function clearChecked(listId: string) {
-    Alert.alert('Clear checked items?', '', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: () => updateList(listId, (items) => items.filter((i) => !i.checked)) },
-    ]);
   }
 
   // ── Favourites actions ───────────────────────────────────────────────────
@@ -629,7 +621,7 @@ export default function ShoppingScreen() {
 
         {lists.length === 0 && favorites.length === 0 && (
           <Text style={[styles.empty, { color: colors.subtext }]}>
-            No shopping lists yet.{'\n'}Tap "New List" to create one.
+            {"No shopping lists yet."}{'\n'}{"Tap \"New List\" to create one."}
           </Text>
         )}
       </ScrollView>

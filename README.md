@@ -30,7 +30,7 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Expired item grace period** — expired items stay visible for 20 days so you can decide what to do with them before they are automatically removed.
 
 ### Food safety recalls
-- **Daily recall check** — every morning at 9:30 AM the app checks three food safety databases: FDA (US), USDA FSIS (US), and the UK Food Standards Agency (FSA).
+- **Daily recall check** — every morning at 9:30 AM the app checks four food safety databases: FDA (US), USDA FSIS (US), UK Food Standards Agency (FSA), and FSSAI (India).
 - **Pantry matching** — if any recalled product name matches something in your pantry, a red safety alert appears immediately on the pantry screen.
 - **Immediate new-item check** — when you add or edit a pantry item, it's matched against the cached recall data right away, without waiting for the next daily check.
 - **Dismiss per item** — review each recall alert and dismiss them one by one, or clear them all at once.
@@ -52,11 +52,13 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Live updates** — figures refresh every time you open the Household tab.
 - **Reset** — tap "Reset tracker" to clear all history. A confirmation step prevents accidental resets.
 
-### Household
+### Household & settings
 - **Multiple members** — add everyone in your household so each pantry item shows who added it.
 - **Profile photo** — tap your avatar to set a photo from your library.
 - **Custom emoji** — each member can pick their own avatar emoji.
-- **Data management** — clear items added in the last 24 hours, or wipe the entire pantry to start fresh. Both options are disabled when the pantry is empty.
+- **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
+- **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
+- **Data management** — clear items added in the last 24 hours, or wipe the entire pantry to start fresh. Both options are disabled when the pantry is empty. A "Load Demo Data" button lets you populate the app with realistic sample data for screenshots or walkthroughs.
 - **Coming soon: shared household** — real-time pantry sharing across multiple devices is on the roadmap. For now, all data lives on your device, so household members are tracked locally for attribution purposes.
 
 ### Health & Nutrition
@@ -69,15 +71,22 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Health tab grades** — the Health tab shows grade breakdowns (A–E) counted from your current pantry items, giving an accurate picture of what you have in stock right now.
 - **Full nutrition panel** — the item detail view pulls the complete Open Food Facts nutrition panel for scanned products.
 
+### Recipes
+- **Pantry-based recipe generation** — select any ingredients from your pantry (sorted by urgency so expiring items appear first), add optional extras you have to hand, choose a cuisine and a meal type, then tap **Generate Recipe**. The app uses Groq's LLaMA 3.3 model to produce a personalised recipe tailored to your choices.
+- **Quick-select shortcuts** — "Use expiring" selects all items expiring within 3 days in one tap, encouraging zero-waste cooking. "Select all" and "Clear" are also available.
+- **15 cuisines** — Surprise me, Indian, British, Thai, Italian, Mexican, Chinese, Japanese, French, Mediterranean, Greek, Korean, American, Middle Eastern, and Spanish.
+- **4 meal types** — Breakfast, Lunch, Evening Snack, and Dinner.
+- **Structured recipe card** — results show the recipe name, a description, serves / prep / cook times, a full ingredient list with quantities, numbered method steps, and a chef's tip.
+- **Try again** — tap "Try a different recipe" to generate a new variation with the same settings.
+- **No API key required** — recipes are sourced from TheMealDB, a free community recipe database. No account or key needed.
+
 ### Siri voice commands (iOS)
 - **"Add [item] to pantry"** — say it to Siri and Fresh Ahead opens directly on the Add Item screen with the product name pre-filled.
 - **"Add [item] to shopping list"** — say it to Siri and the app opens the Shopping tab with the item ready to add.
 - **Shortcut suggestions** — Fresh Ahead donates a Siri shortcut each time you add a pantry or shopping item, so Siri learns your habits and surfaces relevant suggestions proactively.
 - **Setup** — go to Settings › Siri & Search on your iPhone and enable Fresh Ahead shortcuts, or add them via the Household screen.
 
-### Settings & customisation
-- **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
-- **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
+### First-launch
 - **Newsletter opt-in** — on first launch the app offers to keep you updated on new features. Your email address is stored only on your device and is never transmitted to any server.
 
 ---
@@ -89,6 +98,7 @@ All data — pantry items, photos, recall alerts — stays on your device. The a
 - **Open Food Facts** (barcode lookups and nutrition data)
 - **openFDA / USDA FSIS** (food safety recall checks)
 - **UK Food Standards Agency** (food safety recall checks)
+- **FSSAI** (India food safety recall checks — RSS feed, best-effort)
 - **Groq API** (voice input only — short audio clips are sent for transcription when you tap the mic button; audio is not stored by Groq beyond the transcription request)
 
 No account required. No data is ever sent to any server we operate.

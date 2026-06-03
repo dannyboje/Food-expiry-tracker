@@ -53,7 +53,7 @@ export function EmailCaptureModal({ visible, onDone }: Props) {
           <Text style={styles.title}>Fresh Ahead</Text>
           <Text style={styles.subtitle}>Stay in the loop</Text>
           <Text style={styles.body}>
-            Drop your email and we'll let you know about new features,{'\n'}
+            {"Drop your email and we'll let you know about new features,"}{'\n'}
             tips, and improvements — no spam, ever.
           </Text>
 

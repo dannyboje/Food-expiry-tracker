@@ -9,7 +9,6 @@ Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const isRecallAlert = notification.request.content.data?.type === 'recall_alert';
     return {
-      shouldShowAlert: isRecallAlert,
       shouldPlaySound: isRecallAlert,
       shouldSetBadge: false,
       shouldShowBanner: isRecallAlert,

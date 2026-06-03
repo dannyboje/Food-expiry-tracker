@@ -13,7 +13,7 @@ import { requestNotificationPermissions } from '@/utils/notification-scheduler';
 import { scheduleDailyRecallCheck } from '@/utils/recall-scheduler';
 import { EmailCaptureModal } from '@/components/onboarding/EmailCaptureModal';
 import { hasShownEmailPrompt } from '@/utils/email-capture';
-import SiriShortcuts from '@freshahead/siri-shortcuts';
+import { SiriShortcuts } from '@freshahead/siri-shortcuts';
 
 export const unstable_settings = {
   anchor: '(tabs)',
