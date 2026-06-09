@@ -11,7 +11,7 @@ import type { FoodItem } from '@/types/food-item';
 import { insertItem, deleteAllItems } from '@/utils/storage';
 import type { ShoppingList, FavoriteItem } from '@/utils/shopping-store';
 import type { RecentScan } from '@/utils/recent-scans-store';
-import type { RecallMatch } from '@/utils/recall-checker';
+import type { RecallMatch, RecallItem } from '@/utils/recall-checker';
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 
@@ -39,6 +39,7 @@ async function clearAll(): Promise<void> {
     '@consumption_events',
     '@recall_alerts',
     '@recall_dismissed',
+    '@recall_cache',
     'email_capture_shown',
     'email_capture_email',
   ];
@@ -499,6 +500,52 @@ const HOUSEHOLD_PROFILE = {
   createdAt: new Date().toISOString(),
 };
 
+// ── Demo recall cache (raw FSA feed — UK regional section in Household) ─────
+// Dates are within the 7-day window so getRegionalRecalls() keeps them.
+// productDescription for fsa-test-001 is designed to match "Mature Cheddar Cheese"
+// (demo-03) via exact-phrase rule so the alert banner also fires for UK users.
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+const FSA_CACHE_RECALLS: RecallItem[] = [
+  {
+    id: 'fsa-test-001',
+    source: 'FSA',
+    productDescription: 'Davidstow Mature Cheddar Cheese 400g',
+    reason: 'Undeclared mustard allergen. The product contains mustard which is not declared on the label. This is a possible risk for anyone with an allergy or sensitivity to mustard.',
+    date: daysAgo(2),
+    riskLevel: 'Allergy alert',
+  },
+  {
+    id: 'fsa-test-002',
+    source: 'FSA',
+    productDescription: 'Tesco Finest Scottish Smoked Salmon 120g',
+    reason: 'Possible Listeria monocytogenes contamination detected during routine microbiological testing. Risk to vulnerable groups including pregnant women, elderly, and immunocompromised individuals.',
+    date: daysAgo(3),
+    riskLevel: 'High risk',
+  },
+  {
+    id: 'fsa-test-003',
+    source: 'FSA',
+    productDescription: 'Walkers Ready Salted Crisps Variety Pack 6 x 25g',
+    reason: 'Undeclared milk allergen due to a packaging error. The product may contain milk which is not declared on the label, making it a possible health risk for anyone with an allergy or sensitivity to milk.',
+    date: daysAgo(5),
+    riskLevel: 'Allergy alert',
+  },
+  {
+    id: 'fsa-test-004',
+    source: 'FSA',
+    productDescription: 'Morrison\'s Organic Semi-Skimmed Milk 2L',
+    reason: 'Possible contamination with bacteria (Bacillus cereus) above acceptable levels. Consumption may cause nausea and vomiting. Batch codes: MK260530.',
+    date: daysAgo(1),
+    riskLevel: 'Moderate risk',
+  },
+];
+
 // ── Demo recall alerts ─────────────────────────────────────────────────────
 // One per region so the banner shows FDA / USDA / FSA / FSSAI badges.
 
@@ -530,15 +577,15 @@ const DEMO_RECALLS: RecallMatch[] = [
     },
   },
   {
-    pairId: 'fsa-recall-003:demo-03',
+    pairId: 'fsa-test-001:demo-03',
     pantryItemId: 'demo-03',
     pantryItemName: 'Mature Cheddar Cheese',
     recall: {
-      id: 'fsa-recall-003',
+      id: 'fsa-test-001',
       source: 'FSA',
-      productDescription: 'Davidstow Mature Cheddar Cheese 400g — Brand: Davidstow — Batch codes: DC240101, DC240102',
-      reason: 'Undeclared mustard allergen. The product contains mustard which is not declared on the label. This makes the product a possible health risk for anyone with an allergy or sensitivity to mustard.',
-      date: '2024-03-10T09:00:00Z',
+      productDescription: 'Davidstow Mature Cheddar Cheese 400g',
+      reason: 'Undeclared mustard allergen. The product contains mustard which is not declared on the label. This is a possible risk for anyone with an allergy or sensitivity to mustard.',
+      date: daysAgo(2),
       riskLevel: 'Allergy alert',
     },
   },
@@ -572,5 +619,8 @@ export async function seedDemoData(): Promise<void> {
   await KVStore.setItem('@recent_scans_v1', JSON.stringify(RECENT_SCANS));
   await KVStore.setItem('@household_profile', JSON.stringify(HOUSEHOLD_PROFILE));
   await KVStore.setItem('@recall_alerts', JSON.stringify(DEMO_RECALLS));
+  // Raw recall feed — drives the Regional Food Recalls section in Household tab.
+  // Contains only FSA entries so UK region filtering shows exactly these 4 items.
+  await KVStore.setItem('@recall_cache', JSON.stringify(FSA_CACHE_RECALLS));
   await KVStore.setItem('email_capture_shown', 'true');
 }

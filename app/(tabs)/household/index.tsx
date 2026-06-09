@@ -10,6 +10,7 @@ import KVStore from 'expo-sqlite/kv-store';
 import { useFocusEffect } from 'expo-router';
 import { seedDemoData } from '@/utils/seed-demo-data';
 import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
+import { getRegionalRecalls, parseRecallDate, type RecallItem } from '@/utils/recall-checker';
 import { DIGEST_ENABLED_KEY, DIGEST_HOUR_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
 import { usePantry } from '@/hooks/use-pantry';
 
@@ -112,11 +113,14 @@ export default function HouseholdScreen() {
   const [digestHour, setDigestHour] = useState(9);
   const [seeding, setSeeding] = useState(false);
   const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
+  const [regionalRecalls, setRegionalRecalls] = useState<RecallItem[]>([]);
+  const [recallsExpanded, setRecallsExpanded] = useState(false);
   const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
 
   useFocusEffect(
     useCallback(() => {
       getConsumptionStats().then(setConsumptionStats).catch(() => {});
+      getRegionalRecalls().then(setRegionalRecalls).catch(() => {});
     }, []),
   );
 
@@ -556,6 +560,75 @@ export default function HouseholdScreen() {
           )}
         </View>
 
+        {/* ── Regional Food Recalls ────────────────── */}
+        <TouchableOpacity
+          style={[styles.card, styles.recallCardHeader, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
+          onPress={() => setRecallsExpanded(v => !v)}
+          activeOpacity={0.8}>
+          <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#DC2626" />
+          <Text style={[styles.cardTitle, { color: '#991B1B', flex: 1, marginBottom: 0 }]}>
+            FOOD SAFETY RECALLS
+            {regionalRecalls.length > 0 ? `  ·  ${regionalRecalls.length} active` : ''}
+          </Text>
+          <IconSymbol name={recallsExpanded ? 'chevron.up' : 'chevron.down'} size={13} color="#DC2626" />
+        </TouchableOpacity>
+
+        {recallsExpanded && (
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: '#FECACA', gap: 0 }]}>
+            {regionalRecalls.length === 0 ? (
+              <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0 }]}>
+                No active recalls in your region. Recall data is fetched daily and entries older than 7 days are removed automatically.
+              </Text>
+            ) : (
+              <>
+                <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0, marginBottom: 12 }]}>
+                  Showing recalls from the past 7 days for your region. Entries are removed automatically after 7 days.
+                </Text>
+                {regionalRecalls.map((recall, i) => {
+                  const date = parseRecallDate(recall.date);
+                  const dateStr = date
+                    ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                    : recall.date;
+                  return (
+                    <View
+                      key={recall.id}
+                      style={[
+                        styles.recallRow,
+                        i < regionalRecalls.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}>
+                      <View style={[
+                        styles.recallSourceBadge,
+                        recall.source === 'FDA'   && { backgroundColor: '#1D4ED8' },
+                        recall.source === 'USDA'  && { backgroundColor: '#15803D' },
+                        recall.source === 'FSA'   && { backgroundColor: '#7C3AED' },
+                        recall.source === 'FSSAI' && { backgroundColor: '#EA580C' },
+                      ]}>
+                        <Text style={styles.recallSourceText}>{recall.source}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.recallProduct, { color: colors.text }]} numberOfLines={2}>
+                          {recall.productDescription || '—'}
+                        </Text>
+                        {recall.reason ? (
+                          <Text style={[styles.recallReason, { color: colors.subtext }]} numberOfLines={2}>
+                            {recall.reason}
+                          </Text>
+                        ) : null}
+                        <View style={styles.recallMeta}>
+                          {dateStr ? <Text style={[styles.recallDate, { color: colors.subtext }]}>{dateStr}</Text> : null}
+                          {recall.riskLevel ? (
+                            <Text style={styles.recallRisk}>{recall.riskLevel}</Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        )}
+
         {/* ── Settings ─────────────────────────────── */}
         <View style={styles.settingsHeading}>
           <IconSymbol name="gear" size={16} color={colors.subtext} />
@@ -851,6 +924,17 @@ const styles = StyleSheet.create({
   statLabel:   { fontSize: 11, textAlign: 'center' },
   statsHint:   { fontSize: 12, lineHeight: 17, marginTop: 8 },
   resetBtn:    { fontSize: 13, fontWeight: '600' },
+
+  // Regional recalls
+  recallCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
+  recallRow:         { paddingVertical: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  recallSourceBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 2 },
+  recallSourceText:  { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
+  recallProduct:     { fontSize: 13, fontWeight: '700', lineHeight: 18 },
+  recallReason:      { fontSize: 12, lineHeight: 17 },
+  recallMeta:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  recallDate:        { fontSize: 11 },
+  recallRisk:        { fontSize: 10, fontWeight: '700', color: '#EF4444' },
 
   // Settings section
   settingsHeading: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 8 },

@@ -1,4 +1,5 @@
 import KVStore from 'expo-sqlite/kv-store';
+import { NativeModules, Platform } from 'react-native';
 import type { FoodItem } from '@/types/food-item';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -38,12 +39,39 @@ function fetchWithTimeout(url: string, ms: number): Promise<Response> {
 
 // ── Region detection ───────────────────────────────────────────────────────
 
-// Uses the Intl API (Hermes-supported) — no GPS, no permissions, works offline.
-// Returns ISO 3166-1 alpha-2 upper-case country code, e.g. "US", "GB", "IN".
-function getDeviceRegion(): string {
+// Extracts a 2-letter ISO country code from a locale string like "en_GB", "en-US".
+function countryFromLocale(locale: string): string {
+  const parts = locale.split(/[-_]/);
+  if (parts.length >= 2) {
+    const candidate = parts[parts.length - 1].toUpperCase();
+    if (/^[A-Z]{2}$/.test(candidate)) return candidate;
+  }
+  return '';
+}
+
+// Returns ISO 3166-1 alpha-2 country code. Tries native OS APIs first (most
+// reliable on Hermes where Intl locale may omit the region tag), then falls
+// back to Intl. Returns '' when nothing resolves — caller maps '' to all APIs.
+export function getDeviceRegion(): string {
   try {
-    const locale = Intl.DateTimeFormat().resolvedOptions().locale; // e.g. "en-US", "en-GB"
-    return locale.split('-').pop()?.toUpperCase() ?? '';
+    // iOS: AppleLocale is in "en_GB" format; AppleLanguages[0] is "en-GB".
+    if (Platform.OS === 'ios') {
+      const settings = (NativeModules.SettingsManager as any)?.settings ?? {};
+      const raw: string = settings.AppleLocale ?? settings.AppleLanguages?.[0] ?? '';
+      const country = countryFromLocale(raw);
+      if (country) return country;
+    }
+
+    // Android: localeIdentifier is "en_GB" format.
+    if (Platform.OS === 'android') {
+      const raw: string = (NativeModules.I18nManager as any)?.localeIdentifier ?? '';
+      const country = countryFromLocale(raw);
+      if (country) return country;
+    }
+
+    // Fallback: Intl API (may return just "en" on some Hermes builds).
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    return countryFromLocale(locale);
   } catch {
     return '';
   }
@@ -214,31 +242,32 @@ function tokenize(text: string): string[] {
     .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
 }
 
+function normalise(text: string): string {
+  return text.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function itemMatchesRecall(itemName: string, recallDescription: string): boolean {
   if (!recallDescription) return false;
 
-  const itemLower  = itemName.trim().toLowerCase();
-  const recallLower = recallDescription.toLowerCase();
-
-  // 1. Direct substring match — most reliable signal.
-  //    "Smoked Salmon" inside "Scottish Smoked Salmon Fillets" → match.
-  if (recallLower.includes(itemLower)) return true;
-
-  // 2. All significant words from item name appear somewhere in the recall text.
-  //    Guards against the item being a single generic word (e.g. "milk").
   const itemTokens = tokenize(itemName);
-  if (itemTokens.length >= 2) {
-    if (itemTokens.every((t) => recallLower.includes(t))) return true;
-  }
 
-  // 3. Token-level intersection — at least one meaningful word matches.
-  //    Also catches partial stems: "chicken" matches "chickens", "chickpeas" would not.
-  const recallTokens = new Set(tokenize(recallDescription));
-  return itemTokens.some((t) =>
-    recallTokens.has(t) ||
-    // Simple stem check: recall token starts with item token (plural/suffix handling)
-    [...recallTokens].some((rt) => rt.startsWith(t) && rt.length <= t.length + 3)
-  );
+  // Single-word item names (e.g. "Milk", "Eggs", "Beef") are too generic to match
+  // reliably — they would produce false positives against almost every recall.
+  if (itemTokens.length < 2) return false;
+
+  const itemNorm   = normalise(itemName);
+  const recallNorm = normalise(recallDescription);
+
+  // Rule 1 — Exact phrase: the full item name appears as a contiguous phrase in the
+  // recall description. "Smoked Salmon" ⊂ "Kirkland Smoked Salmon Fillets" → match.
+  if (recallNorm.includes(itemNorm)) return true;
+
+  // Rule 2 — All tokens present: every meaningful word in the item name appears in the
+  // recall text. Only applied when the item has 3+ tokens to avoid 2-word scatter matches
+  // (e.g. "Organic Milk" matching "organic ... milk of magnesia").
+  if (itemTokens.length >= 3 && itemTokens.every((t) => recallNorm.includes(t))) return true;
+
+  return false;
 }
 
 function matchRecalls(
@@ -351,6 +380,57 @@ export async function runRecallCheck(items: FoodItem[]): Promise<RecallMatch[]> 
     await setLastCheckDate(new Date().toISOString().split('T')[0]);
   }
   return matches;
+}
+
+// ── Regional recall browser ────────────────────────────────────────────────
+
+// Parses a raw date string from any of the four APIs into a Date.
+// Returns null when the string cannot be interpreted.
+export function parseRecallDate(raw: string): Date | null {
+  if (!raw) return null;
+  // FDA uses YYYYMMDD; convert to ISO before parsing.
+  const iso = raw.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Maps region code to the recall sources that are authoritative for that country.
+function sourcesForRegion(region: string): RecallItem['source'][] {
+  switch (region) {
+    case 'US': return ['FDA', 'USDA'];
+    case 'GB': return ['FSA'];
+    case 'IN': return ['FSSAI'];
+    default:   return ['FDA', 'USDA', 'FSA', 'FSSAI'];
+  }
+}
+
+// Returns cached recalls filtered to:
+//   1. Sources relevant to the device's region — UK users never see USDA/FDA.
+//   2. Recalls dated within the last 30 days.
+// Also prunes stale (>30 day) entries from the cache in-place.
+// Items whose date cannot be parsed are kept rather than silently dropped.
+export async function getRegionalRecalls(): Promise<RecallItem[]> {
+  const raw = await KVStore.getItem(RECALLS_CACHE_KEY);
+  if (!raw) return [];
+  let recalls: RecallItem[];
+  try { recalls = JSON.parse(raw) as RecallItem[]; } catch { return []; }
+
+  // Prune stale items from cache, but keep all sources intact so a locale
+  // change doesn't empty the cache before the next daily fetch.
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const agePruned = recalls.filter(r => {
+    const d = parseRecallDate(r.date);
+    return d === null || d >= cutoff;
+  });
+  if (agePruned.length < recalls.length) {
+    await KVStore.setItem(RECALLS_CACHE_KEY, JSON.stringify(agePruned));
+  }
+
+  // Now filter the output to only the sources relevant to this device's region.
+  const region  = getDeviceRegion();
+  const sources = sourcesForRegion(region);
+  return agePruned.filter(r => sources.includes(r.source));
 }
 
 export async function dismissAllAlerts(pairIds: string[]): Promise<void> {
