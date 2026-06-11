@@ -378,7 +378,7 @@
       <div class="feature-card">
         <span class="feature-icon">🚨</span>
         <h3>Food Recall Alerts</h3>
-        <p>Checks the right recall database for your country — FDA &amp; USDA (US), FSA (UK), or FSSAI (India) — daily, and alerts you if anything in your pantry is affected. No GPS needed; uses your device locale.</p>
+        <p>Checks the right database for your country — FDA &amp; USDA (US), FSA (UK), or FSSAI (India) — and alerts you only if a recalled product matches something in your pantry. UK users only ever see UK (FSA) alerts. The Household tab shows a live 7-day recall feed for your country. No GPS needed.</p>
       </div>
       <div class="feature-card">
         <span class="feature-icon">💊</span>
@@ -513,7 +513,7 @@
       <button class="fa-modal-close" onclick="document.getElementById('faPrivacyModal').classList.remove('open')">✕</button>
     </div>
     <div class="fa-modal-body">
-      <p class="pp-updated">Last updated: 3 June 2026 &nbsp;·&nbsp; Fresh Ahead by Yoganjali Consultancy Services Ltd</p>
+      <p class="pp-updated">Last updated: 11 June 2026 &nbsp;·&nbsp; Fresh Ahead by Yoganjali Consultancy Services Ltd</p>
 
       <div class="pp-summary">
         <ul>
@@ -534,7 +534,7 @@
 
       <h3>3. External network calls</h3>
       <p><strong>Barcode lookups</strong> — when you scan a barcode, only the barcode number is sent to Open Food Facts (openfoodfacts.org) and USDA FoodData Central to retrieve product information. No personal data is transmitted.</p>
-      <p><strong>Food recall checks</strong> — the App fetches public recall lists from the agency relevant to your country (US FDA + USDA FSIS for US users, UK FSA for UK users, FSSAI for Indian users). The appropriate source is selected using your device's locale setting via the Intl API — no location permission is requested. Your pantry contents are matched against these lists entirely on your device. Nothing from your pantry is ever sent externally.</p>
+      <p><strong>Food recall checks</strong> — the App fetches public recall lists from the government agency relevant to your country. The API called depends on your device locale: US FDA (<code>api.fda.gov/food/enforcement.json</code>) + USDA FSIS (<code>www.fsis.usda.gov/fsis/api/recall</code>) for US users; UK Food Standards Agency (<code>data.food.gov.uk/food-alerts/id.json</code>) for UK users; FSSAI RSS feed for Indian users. The appropriate source is determined using native OS locale APIs (iOS: <code>AppleLocale</code>; Android: <code>localeIdentifier</code>), with an Intl fallback — no location permission is requested. Pantry matching and all filtering happen entirely on your device; nothing from your pantry is ever sent externally. Alerts shown are always filtered to sources authoritative for your region.</p>
       <p><strong>Healthier alternatives</strong> — when a scanned product has a low health score, the App queries Open Food Facts for better-rated products in the same category. Only category tags (e.g. "en:chocolates") and your approximate country (derived on-device from GPS) are sent — no personal data or pantry contents leave your device. If you tap the cart icon, your browser or the Google app opens a Google Shopping search; that interaction is subject to Google's own privacy policy.</p>
 
       <p><strong>Voice input</strong> — when you tap the microphone button on the product name field, a short audio clip is recorded and sent to Groq (groq.com) for transcription using the Whisper model. The transcribed text is returned to the App and placed in the name field. Groq does not store audio beyond the duration of the request. This feature is entirely optional; you can add item names by typing instead. Groq's own privacy policy applies to this interaction.</p>

@@ -115,12 +115,16 @@ export default function HouseholdScreen() {
   const [consumptionStats, setConsumptionStats] = useState<ConsumptionStats | null>(null);
   const [regionalRecalls, setRegionalRecalls] = useState<RecallItem[]>([]);
   const [recallsExpanded, setRecallsExpanded] = useState(false);
+  const [recallSourceFilter, setRecallSourceFilter] = useState<RecallItem['source'] | 'ALL'>('ALL');
   const { enrichedItems, clearAllPantryItems, clearRecentPantryItems } = usePantry();
 
   useFocusEffect(
     useCallback(() => {
       getConsumptionStats().then(setConsumptionStats).catch(() => {});
-      getRegionalRecalls().then(setRegionalRecalls).catch(() => {});
+      getRegionalRecalls().then(recalls => {
+        setRegionalRecalls(recalls);
+        setRecallSourceFilter('ALL');
+      }).catch(() => {});
     }, []),
   );
 
@@ -561,73 +565,109 @@ export default function HouseholdScreen() {
         </View>
 
         {/* ── Regional Food Recalls ────────────────── */}
-        <TouchableOpacity
-          style={[styles.card, styles.recallCardHeader, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
-          onPress={() => setRecallsExpanded(v => !v)}
-          activeOpacity={0.8}>
-          <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#DC2626" />
-          <Text style={[styles.cardTitle, { color: '#991B1B', flex: 1, marginBottom: 0 }]}>
-            FOOD SAFETY RECALLS
-            {regionalRecalls.length > 0 ? `  ·  ${regionalRecalls.length} active` : ''}
-          </Text>
-          <IconSymbol name={recallsExpanded ? 'chevron.up' : 'chevron.down'} size={13} color="#DC2626" />
-        </TouchableOpacity>
+        {(() => {
+          const filteredRecalls = recallSourceFilter === 'ALL'
+            ? regionalRecalls
+            : regionalRecalls.filter(r => r.source === recallSourceFilter);
+          const sourceColor = (src: string) =>
+            src === 'FDA' ? '#1D4ED8' : src === 'USDA' ? '#15803D' : src === 'FSA' ? '#7C3AED' : '#EA580C';
 
-        {recallsExpanded && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: '#FECACA', gap: 0 }]}>
-            {regionalRecalls.length === 0 ? (
-              <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0 }]}>
-                No active recalls in your region. Recall data is fetched daily and entries older than 7 days are removed automatically.
-              </Text>
-            ) : (
-              <>
-                <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0, marginBottom: 12 }]}>
-                  Showing recalls from the past 7 days for your region. Entries are removed automatically after 7 days.
+          return (
+            <>
+              <TouchableOpacity
+                style={[styles.card, styles.recallCardHeader, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
+                onPress={() => setRecallsExpanded(v => !v)}
+                activeOpacity={0.8}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={16} color="#DC2626" />
+                <Text style={[styles.cardTitle, { color: '#991B1B', flex: 1, marginBottom: 0 }]}>
+                  FOOD SAFETY RECALLS
+                  {regionalRecalls.length > 0
+                    ? `  ·  ${filteredRecalls.length}${recallSourceFilter !== 'ALL' ? ` ${recallSourceFilter}` : ''} active`
+                    : ''}
                 </Text>
-                {regionalRecalls.map((recall, i) => {
-                  const date = parseRecallDate(recall.date);
-                  const dateStr = date
-                    ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-                    : recall.date;
-                  return (
-                    <View
-                      key={recall.id}
-                      style={[
-                        styles.recallRow,
-                        i < regionalRecalls.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}>
-                      <View style={[
-                        styles.recallSourceBadge,
-                        recall.source === 'FDA'   && { backgroundColor: '#1D4ED8' },
-                        recall.source === 'USDA'  && { backgroundColor: '#15803D' },
-                        recall.source === 'FSA'   && { backgroundColor: '#7C3AED' },
-                        recall.source === 'FSSAI' && { backgroundColor: '#EA580C' },
-                      ]}>
-                        <Text style={styles.recallSourceText}>{recall.source}</Text>
+                <IconSymbol name={recallsExpanded ? 'chevron.up' : 'chevron.down'} size={13} color="#DC2626" />
+              </TouchableOpacity>
+
+              {recallsExpanded && (
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: '#FECACA', gap: 0 }]}>
+                  {regionalRecalls.length === 0 ? (
+                    <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0 }]}>
+                      No active recalls in your region. Recall data is fetched daily and entries older than 7 days are removed automatically.
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 0, marginBottom: 10 }]}>
+                        Recalls from the past 7 days. Tap a source to filter.
+                      </Text>
+
+                      {/* Source filter pills — always visible so user can toggle */}
+                      <View style={styles.recallFilterRow}>
+                        {(['ALL', 'FSA', 'FDA', 'USDA', 'FSSAI'] as const).map(src => {
+                          const active = recallSourceFilter === src;
+                          const color = src === 'ALL' ? '#374151' : sourceColor(src);
+                          return (
+                            <TouchableOpacity
+                              key={src}
+                              onPress={() => setRecallSourceFilter(src)}
+                              style={[
+                                styles.recallFilterPill,
+                                active && { backgroundColor: color, borderColor: color },
+                              ]}>
+                              <Text style={[styles.recallFilterPillText, active && { color: '#fff' }]}>
+                                {src}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={[styles.recallProduct, { color: colors.text }]} numberOfLines={2}>
-                          {recall.productDescription || '—'}
+
+                      {filteredRecalls.length === 0 ? (
+                        <Text style={[styles.statsHint, { color: colors.subtext, marginTop: 4 }]}>
+                          No {recallSourceFilter} recalls in the past 7 days.
                         </Text>
-                        {recall.reason ? (
-                          <Text style={[styles.recallReason, { color: colors.subtext }]} numberOfLines={2}>
-                            {recall.reason}
-                          </Text>
-                        ) : null}
-                        <View style={styles.recallMeta}>
-                          {dateStr ? <Text style={[styles.recallDate, { color: colors.subtext }]}>{dateStr}</Text> : null}
-                          {recall.riskLevel ? (
-                            <Text style={styles.recallRisk}>{recall.riskLevel}</Text>
-                          ) : null}
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </>
-            )}
-          </View>
-        )}
+                      ) : (
+                        filteredRecalls.map((recall, i) => {
+                          const date = parseRecallDate(recall.date);
+                          const dateStr = date
+                            ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                            : recall.date;
+                          return (
+                            <View
+                              key={recall.id}
+                              style={[
+                                styles.recallRow,
+                                i < filteredRecalls.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                              ]}>
+                              <View style={[styles.recallSourceBadge, { backgroundColor: sourceColor(recall.source) }]}>
+                                <Text style={styles.recallSourceText}>{recall.source}</Text>
+                              </View>
+                              <View style={{ flex: 1, gap: 2 }}>
+                                <Text style={[styles.recallProduct, { color: colors.text }]} numberOfLines={2}>
+                                  {recall.productDescription || '—'}
+                                </Text>
+                                {recall.reason ? (
+                                  <Text style={[styles.recallReason, { color: colors.subtext }]} numberOfLines={2}>
+                                    {recall.reason}
+                                  </Text>
+                                ) : null}
+                                <View style={styles.recallMeta}>
+                                  {dateStr ? <Text style={[styles.recallDate, { color: colors.subtext }]}>{dateStr}</Text> : null}
+                                  {recall.riskLevel ? (
+                                    <Text style={styles.recallRisk}>{recall.riskLevel}</Text>
+                                  ) : null}
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        })
+                      )}
+                    </>
+                  )}
+                </View>
+              )}
+            </>
+          );
+        })()}
 
         {/* ── Settings ─────────────────────────────── */}
         <View style={styles.settingsHeading}>
@@ -935,6 +975,12 @@ const styles = StyleSheet.create({
   recallMeta:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   recallDate:        { fontSize: 11 },
   recallRisk:        { fontSize: 10, fontWeight: '700', color: '#EF4444' },
+  recallFilterRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  recallFilterPill:  {
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16,
+    borderWidth: 1, borderColor: '#D1D5DB', backgroundColor: '#F9FAFB',
+  },
+  recallFilterPillText: { fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.3 },
 
   // Settings section
   settingsHeading: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 8 },

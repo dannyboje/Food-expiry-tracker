@@ -31,9 +31,11 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 
 ### Food safety recalls
 - **Daily recall check** — every morning at 9:30 AM the app checks the food safety databases relevant to your country: FDA + USDA FSIS (US), UK Food Standards Agency (GB), or FSSAI (India). Users in other regions receive checks from all four databases so imported products are covered.
-- **Location-aware filtering** — recall sources are selected automatically from the device's locale using the Intl API — no GPS or permissions required.
+- **Location-aware filtering** — recall sources are selected automatically from the device's region setting using native OS locale APIs (iOS: `AppleLocale`; Android: `localeIdentifier`), with a fallback to the Intl API — no GPS or permissions required. Alerts are also filtered by source before display, so UK users only ever see FSA recalls regardless of what is stored in cache.
+- **Exact-phrase matching** — a pantry item must appear as a contiguous phrase inside the recall description (e.g. "Mature Cheddar Cheese" inside "Davidstow Mature Cheddar Cheese 400g"). Single-word item names are never matched to avoid false positives.
 - **Pantry matching** — if any recalled product name matches something in your pantry, a red safety alert banner appears at the top of the pantry screen, collapsed by default. Tap to expand and see full recall details.
 - **Immediate new-item check** — when you add or edit a pantry item, it's matched against the cached recall data right away, without waiting for the next daily check.
+- **Regional recall browser** — the Household tab includes a dedicated Food Safety Recalls card showing all recalls from your country's database issued in the last 7 days, independently of your pantry contents. Recalls older than 7 days are automatically pruned.
 - **Dismiss per item** — expand the alert banner, review each item's recall details individually, and dismiss them one by one. A full-width "Dismiss all alerts" button at the bottom of the expanded panel clears all at once.
 
 ### Shopping list
@@ -57,8 +59,10 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 - **Multiple members** — add everyone in your household so each pantry item shows who added it.
 - **Profile photo** — tap your avatar to set a photo from your library.
 - **Custom emoji** — each member can pick their own avatar emoji.
+- **Food waste tracker** — see how many items you used vs. wasted this month and your overall waste rate. Long-press any pantry item and tap "I used it" or "It expired / wasted" to log it. Reset all history with a confirmation step.
+- **Regional food recalls** — a collapsible card on the Household tab shows every recall issued in the last 7 days from your country's food safety database (FSA for UK, FDA + USDA for US, FSSAI for India). Recalls are filtered to your region automatically — no GPS needed. Old recalls are pruned after 7 days.
 - **Alert thresholds** — adjust how many days before expiry you want to be notified, independently configurable for four shelf-life bands (under 5 days, 5–14 days, 15–29 days, 30+ days).
-- **Daily digest** — opt in to a daily summary notification of items needing attention. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
+- **Daily digest** — opt in to a daily summary notification of items needing attention. The notification shows a simple count (e.g. "5 items need your attention") — open the app to see the full list. Choose the delivery time anywhere from 6 AM to 10 PM; defaults to 9 AM.
 - **Data management** — clear items added in the last 24 hours, or wipe the entire pantry to start fresh. Both options are disabled when the pantry is empty. A "Load Demo Data" button lets you populate the app with realistic sample data for screenshots or walkthroughs.
 - **Coming soon: shared household** — real-time pantry sharing across multiple devices is on the roadmap. For now, all data lives on your device, so household members are tracked locally for attribution purposes.
 
@@ -87,11 +91,12 @@ Fresh Ahead helps you take control of your food and medications, reduce waste, a
 
 All data — pantry items, photos, recall alerts — stays on your device. The app only makes outbound requests to:
 
-- **Open Food Facts** (barcode lookups and nutrition data)
-- **openFDA / USDA FSIS** (US food safety recall checks — only fetched for US-locale devices)
-- **UK Food Standards Agency** (UK food safety recall checks — only fetched for GB-locale devices)
-- **FSSAI** (India food safety recall checks — only fetched for IN-locale devices; RSS feed, best-effort)
-- **Groq API** (voice input only — short audio clips are sent for transcription when you tap the mic button; audio is not stored by Groq beyond the transcription request)
+- **Open Food Facts** (`openfoodfacts.org`) — barcode lookups and nutrition data
+- **openFDA** (`api.fda.gov/food/enforcement.json`) — US food safety recall checks; only fetched for US-locale devices
+- **USDA FSIS** (`www.fsis.usda.gov/fsis/api/recall`) — US meat and poultry recall checks; only fetched for US-locale devices
+- **UK Food Standards Agency** (`data.food.gov.uk/food-alerts/id.json`) — UK food safety recall checks; only fetched for GB-locale devices
+- **FSSAI** (RSS feed, `fssai.gov.in`) — India food safety recall checks; only fetched for IN-locale devices; best-effort
+- **Groq API** (`api.groq.com`) — voice input only; short audio clips are sent for transcription when you tap the mic button; audio is not stored by Groq beyond the transcription request
 
 No account required. No data is ever sent to any server we operate.
 

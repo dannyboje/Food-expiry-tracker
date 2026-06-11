@@ -39,11 +39,16 @@ function fetchWithTimeout(url: string, ms: number): Promise<Response> {
 
 // ── Region detection ───────────────────────────────────────────────────────
 
-// Extracts a 2-letter ISO country code from a locale string like "en_GB", "en-US".
+// Extracts a 2-letter ISO country code from a locale string.
+// Handles: "en_GB", "en-GB", "en_GB_POSIX", "en_GB@calendar=gregorian", "zh-Hant-TW".
 function countryFromLocale(locale: string): string {
-  const parts = locale.split(/[-_]/);
-  if (parts.length >= 2) {
-    const candidate = parts[parts.length - 1].toUpperCase();
+  // Strip locale options (e.g. @calendar=gregorian, @currency=GBP)
+  const base = locale.split('@')[0];
+  const parts = base.split(/[-_]/);
+  // Scan from index 1 (index 0 is always the language tag).
+  // Country codes are exactly 2 ASCII letters — script tags (Hant, Hans) are 4+.
+  for (let i = 1; i < parts.length; i++) {
+    const candidate = parts[i].toUpperCase();
     if (/^[A-Z]{2}$/.test(candidate)) return candidate;
   }
   return '';
@@ -114,50 +119,45 @@ async function fetchUSDARecalls(): Promise<RecallItem[]> {
   }));
 }
 
-// FSA Food Alerts API (UK Food Standards Agency) — free, no key required.
+// FSA Food Alerts API v2 (UK Food Standards Agency) — free, no key required.
+// Endpoint: https://data.food.gov.uk/food-alerts/id.json
+// Sort: _sort=-created returns newest first.
 async function fetchFSARecalls(): Promise<RecallItem[]> {
   const res = await fetchWithTimeout(
-    'https://data.food.gov.uk/food-alerts/v1/?limit=50&sort=-modified',
+    'https://data.food.gov.uk/food-alerts/id.json?_limit=100&_sort=-created',
     12_000,
   );
   if (!res.ok) return [];
   const json = await res.json() as { items?: Record<string, unknown>[] };
   return (json.items ?? []).map((r, i) => {
-    // productDetails can be an array or a single object — handle both.
-    const rawDetails = r.productDetails;
-    const details: Record<string, string>[] = Array.isArray(rawDetails)
-      ? rawDetails as Record<string, string>[]
-      : rawDetails && typeof rawDetails === 'object'
-        ? [rawDetails as Record<string, string>]
-        : [];
+    // productDetails is always an array in v2. Deduplicate names (some alerts
+    // repeat the same product name across multiple batch entries).
+    const details = Array.isArray(r.productDetails)
+      ? (r.productDetails as Record<string, string>[])
+      : [];
+    const uniqueNames = [...new Set(
+      details.map((d) => d.productName ?? '').filter(Boolean),
+    )];
+    const productDescription = uniqueNames.length > 0
+      ? uniqueNames.join(', ')
+      : String(r.shortTitle ?? r.title ?? '');
 
-    // Try both camelCase and snake_case field names used by different FSA API versions.
-    const productDescription = details.length > 0
-      ? details
-          .map((d) => [
-            d.productName ?? d.product_name ?? d.name ?? '',
-            d.brandName  ?? d.brand_name  ?? d.brand ?? '',
-          ].filter(Boolean).join(' '))
-          .filter(Boolean)
-          .join(', ')
-      // Fall back to the alert title — still useful for substring matching
-      : String(r.title ?? r.shortTitle ?? r.alertTitle ?? '');
-
-    const problem = Array.isArray(r.problem)
-      ? r.problem as Record<string, string>[]
-      : r.problem && typeof r.problem === 'object'
-        ? [r.problem as Record<string, string>]
-        : [];
-    const reason = problem.map((p) => p.description ?? p.type ?? '').filter(Boolean).join('; ')
-      || String(r.description ?? r.riskStatement ?? '');
+    // problem is an array; each entry has a riskStatement string.
+    const problems = Array.isArray(r.problem)
+      ? (r.problem as Record<string, string>[])
+      : [];
+    const reason = problems
+      .map((p) => p.riskStatement ?? '')
+      .filter(Boolean)
+      .join('; ');
 
     return {
-      id: String(r.id ?? `fsa-${i}`),
+      id: String(r.notation ?? `fsa-${i}`),
       source: 'FSA' as const,
       productDescription,
       reason,
       date: String(r.created ?? r.modified ?? ''),
-      riskLevel: String(r.riskStatement ?? ''),
+      riskLevel: '',  // v2 API encodes risk in riskStatement, not a separate field
     };
   });
 }
@@ -302,7 +302,14 @@ async function setLastCheckDate(date: string): Promise<void> {
 export async function getStoredAlerts(): Promise<RecallMatch[]> {
   const raw = await KVStore.getItem(ALERTS_KEY);
   if (!raw) return [];
-  try { return JSON.parse(raw) as RecallMatch[]; } catch { return []; }
+  let all: RecallMatch[];
+  try { all = JSON.parse(raw) as RecallMatch[]; } catch { return []; }
+  // Filter to sources relevant for this device's region.
+  // If region is unknown, show everything rather than silently hiding alerts.
+  const region = getDeviceRegion();
+  if (!region) return all;
+  const sources = sourcesForRegion(region);
+  return all.filter((a) => sources.includes(a.recall.source));
 }
 
 async function storeAlerts(alerts: RecallMatch[]): Promise<void> {

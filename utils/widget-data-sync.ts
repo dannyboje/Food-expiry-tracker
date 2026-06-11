@@ -55,18 +55,8 @@ export async function scheduleDailyDigest(items: FoodItemWithStatus[], hour = 9)
     return;
   }
 
-  const sorted = [...urgent].sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
-  const top3 = sorted.slice(0, 3);
-
-  const itemList = top3.map((i) => {
-    if (i.daysUntilExpiry <= 0) return `${i.name} (expired)`;
-    if (i.daysUntilExpiry === 1) return `${i.name} (today)`;
-    return `${i.name} (${i.daysUntilExpiry}d)`;
-  }).join(', ');
-
-  const body =
-    `${urgent.length} item${urgent.length !== 1 ? 's' : ''} need attention: ${itemList}` +
-    (urgent.length > 3 ? ` +${urgent.length - 3} more` : '');
+  const count = urgent.length;
+  const body = `${count} item${count !== 1 ? 's' : ''} need${count === 1 ? 's' : ''} your attention — open the app to review`;
 
   try {
     const id = await Notifications.scheduleNotificationAsync({

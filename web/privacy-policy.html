@@ -133,7 +133,7 @@
 <div class="page-header">
   <div style="max-width:740px; margin:0 auto;">
     <h1>Privacy Policy</h1>
-    <p>Last updated: 5 May 2026 &nbsp;·&nbsp; Effective: 5 May 2026</p>
+    <p>Last updated: 11 June 2026 &nbsp;·&nbsp; Effective: 5 May 2026</p>
   </div>
 </div>
 
@@ -184,11 +184,12 @@
   <h3>Food safety recall checks</h3>
   <p>The App fetches public food safety recall lists from government agencies to alert you if a product in your pantry has been recalled. The following public APIs are used:</p>
   <ul>
-    <li><strong>US FDA</strong> — <code>api.fda.gov/food/enforcement.json</code></li>
-    <li><strong>US USDA FSIS</strong> — <code>www.fsis.usda.gov/fsis/api/recall</code></li>
-    <li><strong>UK Food Standards Agency</strong> — <code>data.food.gov.uk/food-alerts</code></li>
+    <li><strong>US FDA</strong> — <code>api.fda.gov/food/enforcement.json</code> — fetched only for US-locale devices</li>
+    <li><strong>US USDA FSIS</strong> — <code>www.fsis.usda.gov/fsis/api/recall</code> — fetched only for US-locale devices</li>
+    <li><strong>UK Food Standards Agency (FSA)</strong> — <code>data.food.gov.uk/food-alerts/id.json</code> — fetched only for GB-locale devices</li>
+    <li><strong>FSSAI</strong> — RSS feed at <code>fssai.gov.in</code> — fetched only for IN-locale devices; best-effort</li>
   </ul>
-  <p>Recall data is downloaded and matched against your pantry items entirely on your device. <strong>Your pantry contents are never sent to any external server.</strong></p>
+  <p>The API called is determined entirely by your device's locale setting — no GPS or location permission is used. Recall data is downloaded and matched against your pantry items entirely on your device. <strong>Your pantry contents are never sent to any external server.</strong></p>
 
   <h2>4. Permissions we request</h2>
   <table>
