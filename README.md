@@ -164,3 +164,13 @@ npx eas-cli@latest submit -p android --profile production
 ```
 
 EAS is configured with `appVersionSource: "remote"` — build numbers are managed automatically by Expo, not in `app.json`.
+
+### Android R8 / ProGuard mapping file
+
+R8 code shrinking is enabled for release builds (`enableProguardInReleaseBuilds: true` in `app.json`). Each production build generates a `mapping.txt` deobfuscation file. To keep crash reports and ANRs readable in Google Play Console, upload this file after every release:
+
+1. Go to [expo.dev](https://expo.dev) → your project → the completed Android build
+2. Download the build artifacts — `mapping.txt` is included in the `.zip`
+3. In Google Play Console → **Release** → **App bundle explorer** → select the build version → **Downloads** tab → upload under **Deobfuscation file**
+
+This silences the "no deobfuscation file" warning in Google Play Console and makes stack traces in crash reports human-readable.
