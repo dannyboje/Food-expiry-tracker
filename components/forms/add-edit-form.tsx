@@ -315,7 +315,7 @@ export function AddEditForm({ initialItem, prefill }: Props) {
         styles.container,
         {
           backgroundColor: colors.background,
-          ...(Platform.OS === 'ios' && { height: windowHeight * 0.92 }),
+          ...(Platform.OS === 'ios' && !Platform.isPad && { height: windowHeight * 0.92 }),
         },
       ]}>
       <View style={[styles.modalHeader, { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
