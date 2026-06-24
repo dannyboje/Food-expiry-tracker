@@ -327,14 +327,24 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
   if (!permission) return null;
 
   if (!permission.granted) {
+    if (!permission.canAskAgain) {
+      return (
+        <View style={styles.permContainer}>
+          <Text style={styles.permText}>Camera access was denied. Enable it in Settings to scan barcodes.</Text>
+          <TouchableOpacity style={styles.permBtn} onPress={() => Linking.openSettings()}>
+            <Text style={styles.permBtnText}>Open Settings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+            <Text style={styles.cancelText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
       <View style={styles.permContainer}>
         <Text style={styles.permText}>Camera access is needed to scan barcodes.</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
           <Text style={styles.permBtnText}>Allow Camera</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
-          <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
       </View>
     );
