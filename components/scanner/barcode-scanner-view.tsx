@@ -344,7 +344,7 @@ export function BarcodeScannerView({ onScan, onCancel }: Props) {
       <View style={styles.permContainer}>
         <Text style={styles.permText}>Camera access is needed to scan barcodes.</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-          <Text style={styles.permBtnText}>Allow Camera</Text>
+          <Text style={styles.permBtnText}>Continue</Text>
         </TouchableOpacity>
       </View>
     );
