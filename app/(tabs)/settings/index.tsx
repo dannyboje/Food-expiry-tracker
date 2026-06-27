@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import KVStore from 'expo-sqlite/kv-store';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { seedDemoData } from '@/utils/seed-demo-data';
 import {
   type AlertThresholds,
   DEFAULT_THRESHOLDS,
@@ -90,6 +89,7 @@ export default function SettingsScreen() {
   }
 
   function handleLoadDemo() {
+    if (!__DEV__) return;
     Alert.alert(
       'Load Demo Data?',
       'This will replace all your current pantry items, shopping lists, and scan history with sample data. This cannot be undone.',
@@ -101,6 +101,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             setSeeding(true);
             try {
+              const { seedDemoData } = await import('@/utils/seed-demo-data');
               await seedDemoData();
               Alert.alert('Done', 'Demo data loaded. Restart the app or navigate away and back to see the changes.');
             } catch {
@@ -181,15 +182,19 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* Demo data */}
-        <Text style={[styles.sectionHeader, { color: colors.subtext }]}>DEVELOPER</Text>
-        <TouchableOpacity
-          style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
-          onPress={handleLoadDemo}
-          disabled={seeding}
-          activeOpacity={0.8}>
-          <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
-        </TouchableOpacity>
+        {/* Demo data — dev builds only */}
+        {__DEV__ && (
+          <>
+            <Text style={[styles.sectionHeader, { color: colors.subtext }]}>DEVELOPER</Text>
+            <TouchableOpacity
+              style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
+              onPress={handleLoadDemo}
+              disabled={seeding}
+              activeOpacity={0.8}>
+              <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* About */}
         <Text style={[styles.sectionHeader, { color: colors.subtext }]}>ABOUT</Text>

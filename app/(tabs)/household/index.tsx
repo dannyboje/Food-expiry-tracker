@@ -8,7 +8,6 @@ import { useCallback, useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import KVStore from 'expo-sqlite/kv-store';
 import { useFocusEffect } from 'expo-router';
-import { seedDemoData } from '@/utils/seed-demo-data';
 import { getConsumptionStats, resetConsumptionEvents, type ConsumptionStats } from '@/utils/consumption-store';
 import { getRegionalRecalls, parseRecallDate, type RecallItem } from '@/utils/recall-checker';
 import { DIGEST_ENABLED_KEY, DIGEST_HOUR_KEY, scheduleDailyDigest, cancelDailyDigest } from '@/utils/widget-data-sync';
@@ -346,6 +345,7 @@ export default function HouseholdScreen() {
   }
 
   function handleLoadDemo() {
+    if (!__DEV__) return;
     Alert.alert(
       'Load Demo Data?',
       'This replaces all pantry items, shopping lists, and scan history with sample data. This cannot be undone.',
@@ -357,6 +357,7 @@ export default function HouseholdScreen() {
           onPress: async () => {
             setSeeding(true);
             try {
+              const { seedDemoData } = await import('@/utils/seed-demo-data');
               await seedDemoData();
               Alert.alert('Done', 'Demo data loaded. Navigate away and back to see the changes.');
             } catch {
@@ -814,15 +815,19 @@ export default function HouseholdScreen() {
           </Text>
         </View>
 
-        {/* Demo */}
-        <Text style={[styles.settingsSub, { color: colors.subtext }]}>DEVELOPER</Text>
-        <TouchableOpacity
-          style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
-          onPress={handleLoadDemo}
-          disabled={seeding}
-          activeOpacity={0.8}>
-          <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
-        </TouchableOpacity>
+        {/* Demo — dev builds only */}
+        {__DEV__ && (
+          <>
+            <Text style={[styles.settingsSub, { color: colors.subtext }]}>DEVELOPER</Text>
+            <TouchableOpacity
+              style={[styles.demoBtn, seeding && { opacity: 0.5 }]}
+              onPress={handleLoadDemo}
+              disabled={seeding}
+              activeOpacity={0.8}>
+              <Text style={styles.demoBtnText}>{seeding ? 'Loading…' : '🎬  Load Demo Data'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* About */}
         <Text style={[styles.settingsSub, { color: colors.subtext }]}>ABOUT</Text>
